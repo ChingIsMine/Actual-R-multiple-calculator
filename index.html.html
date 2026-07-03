@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Actual R Calculator</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #0f1117;
+    color: #e6e6e6;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+  }
+  .container { max-width: 720px; width: 100%; }
+  h1 { font-size: 1.5rem; margin-bottom: 4px; color: #ffffff; }
+  .subtitle { color: #9aa0ac; font-size: 0.9rem; margin-bottom: 24px; }
+  .card {
+    background: #161923;
+    border: 1px solid #262b3a;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 1.05rem; margin: 0 0 14px 0; color: #4fd1c5; }
+  .card h2.stop-color { color: #ff9f5b; }
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+  }
+  .row-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    font-size: 0.75rem;
+    color: #7d8290;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  input[type=number], select {
+    background: #0f1117;
+    border: 1px solid #2c3140;
+    color: #e6e6e6;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    width: 100%;
+  }
+  input[type=number]:focus, select:focus { outline: none; border-color: #4fd1c5; }
+  .remove-btn {
+    background: #2a1620;
+    color: #ff6b81;
+    border: 1px solid #4a2030;
+    border-radius: 8px;
+    width: 34px;
+    height: 34px;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+  }
+  .remove-btn:hover { background: #3a1b28; }
+  .add-btn {
+    background: #14202a;
+    color: #4fd1c5;
+    border: 1px solid #1e3540;
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    margin-top: 6px;
+    margin-right: 8px;
+  }
+  .add-btn:hover { background: #1a2a36; }
+  .add-btn.stop-btn { background: #2a1c0f; color: #ff9f5b; border-color: #40301e; }
+  .add-btn.stop-btn:hover { background: #362510; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 0.82rem; color: #9aa0ac; margin-bottom: 5px; }
+  .direction-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
+  .direction-toggle button {
+    flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #2c3140;
+    background: #0f1117; color: #9aa0ac; cursor: pointer; font-weight: 600;
+  }
+  .direction-toggle button.active-long { background: #10231d; color: #4ade80; border-color: #235c43; }
+  .direction-toggle button.active-short { background: #2a1620; color: #ff6b81; border-color: #4a2030; }
+  .stop-mode-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+  .stop-mode-toggle button {
+    flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #2c3140;
+    background: #0f1117; color: #9aa0ac; cursor: pointer; font-size: 0.85rem;
+  }
+  .stop-mode-toggle button.active { background: #2a1c0f; color: #ff9f5b; border-color: #40301e; }
+  .qty-type-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
+  .qty-type-toggle button {
+    padding: 5px 10px; border-radius: 6px; border: 1px solid #2c3140;
+    background: #0f1117; color: #7d8290; cursor: pointer; font-size: 0.75rem;
+  }
+  .qty-type-toggle button.active { background: #1a2530; color: #4fd1c5; border-color: #2c4550; }
+  .allocation-note {
+    font-size: 0.78rem;
+    color: #7d8290;
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: #0f1117;
+    border-radius: 8px;
+    border: 1px solid #262b3a;
+  }
+  .allocation-note.warn { color: #ff9f5b; border-color: #40301e; }
+  .allocation-note.ok { color: #4ade80; border-color: #235c43; }
+  .results { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .result-box { background: #0f1117; border: 1px solid #262b3a; border-radius: 10px; padding: 14px; }
+  .result-box .label { font-size: 0.78rem; color: #9aa0ac; margin-bottom: 4px; }
+  .result-box .value { font-size: 1.4rem; font-weight: 700; }
+  .result-box.full { grid-column: 1 / -1; text-align: center; padding: 22px; }
+  .result-box.full .value { font-size: 2.4rem; }
+  .positive { color: #4ade80; }
+  .negative { color: #ff6b81; }
+  .neutral { color: #e6e6e6; }
+  footer { text-align: center; color: #565b68; font-size: 0.78rem; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Actual R Calculator</h1>
+  <div class="subtitle">Calculates true risk-to-reward (R-multiple) for trades with multiple entries, multiple stop levels, and multiple partial exits.</div>
+
+  <div class="card">
+    <h2>Direction</h2>
+    <div class="direction-toggle">
+      <button id="btnLong" class="active-long" onclick="setDirection('long')">LONG</button>
+      <button id="btnShort" onclick="setDirection('short')">SHORT</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Entries (Adds)</h2>
+    <div class="row-header"><div>Price</div><div>Shares/Contracts</div><div></div></div>
+    <div id="entriesContainer"></div>
+    <button class="add-btn" onclick="addRow('entriesContainer')">+ Add Entry</button>
+  </div>
+
+  <div class="card">
+    <h2 class="stop-color">Stop Loss(es)</h2>
+    <div class="stop-mode-toggle">
+      <button id="stopModeSingle" class="active" onclick="setStopMode('single')">Single Stop</button>
+      <button id="stopModeMulti" onclick="setStopMode('multi')">Multiple Stops (Scaled)</button>
+    </div>
+
+    <div id="singleStopBlock">
+      <div class="field">
+        <label>Stop Loss Price</label>
+        <input type="number" id="stopLoss" step="any" placeholder="e.g. 95.00" oninput="calculate()">
+      </div>
+    </div>
+
+    <div id="multiStopBlock" style="display:none;">
+      <div class="qty-type-toggle">
+        <button id="qtyTypeShares" class="active" onclick="setQtyType('shares')">Enter as Shares</button>
+        <button id="qtyTypePercent" onclick="setQtyType('percent')">Enter as %</button>
+      </div>
+      <div class="row-header"><div>Stop Price</div><div id="stopQtyHeader">Shares</div><div></div></div>
+      <div id="stopsContainer"></div>
+      <button class="add-btn stop-btn" onclick="addStopRow()">+ Add Stop Level</button>
+      <div class="allocation-note" id="allocationNote">Enter entries first to check allocation.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Exits (Partials)</h2>
+    <div class="qty-type-toggle">
+      <button id="exitQtyTypeShares" class="active" onclick="setExitQtyType('shares')">Enter as Shares</button>
+      <button id="exitQtyTypePercent" onclick="setExitQtyType('percent')">Enter as %</button>
+    </div>
+    <div class="row-header"><div>Price</div><div id="exitQtyHeader">Shares/Contracts</div><div></div></div>
+    <div id="exitsContainer"></div>
+    <button class="add-btn" onclick="addExitRow()">+ Add Exit</button>
+    <div class="allocation-note" id="exitAllocationNote">Enter entries first to check exit allocation.</div>
+  </div>
+
+  <div class="card">
+    <h2>Results</h2>
+    <div class="results">
+      <div class="result-box"><div class="label">Avg Entry Price</div><div class="value neutral" id="avgEntry">–</div></div>
+      <div class="result-box"><div class="label">Avg Exit Price</div><div class="value neutral" id="avgExit">–</div></div>
+      <div class="result-box"><div class="label">Total Position Size</div><div class="value neutral" id="totalShares">–</div></div>
+      <div class="result-box"><div class="label">Shares Closed</div><div class="value neutral" id="closedShares">–</div></div>
+      <div class="result-box"><div class="label">Total Risk ($, 1R)</div><div class="value neutral" id="totalRisk">–</div></div>
+      <div class="result-box"><div class="label">Total Reward ($)</div><div class="value neutral" id="totalReward">–</div></div>
+      <div class="result-box full"><div class="label">ACTUAL R-MULTIPLE</div><div class="value neutral" id="rMultiple">–</div></div>
+    </div>
+  </div>
+
+  <footer>Built for Tom's day trading workflow — weighted entries/exits, blended multi-level stop risk, dollar-based R-multiple.</footer>
+</div>
+
+<script>
+let direction = 'long';
+let stopMode = 'single';
+let qtyType = 'shares';
+let exitQtyType = 'shares';
+
+function setDirection(dir) {
+  direction = dir;
+  document.getElementById('btnLong').classList.toggle('active-long', dir === 'long');
+  document.getElementById('btnShort').classList.toggle('active-short', dir === 'short');
+  calculate();
+}
+
+function setStopMode(mode) {
+  stopMode = mode;
+  document.getElementById('stopModeSingle').classList.toggle('active', mode === 'single');
+  document.getElementById('stopModeMulti').classList.toggle('active', mode === 'multi');
+  document.getElementById('singleStopBlock').style.display = mode === 'single' ? 'block' : 'none';
+  document.getElementById('multiStopBlock').style.display = mode === 'multi' ? 'block' : 'none';
+  if (mode === 'multi' && document.querySelectorAll('#stopsContainer .row').length === 0) {
+    addStopRow();
+    addStopRow();
+  }
+  calculate();
+}
+
+function setQtyType(type) {
+  qtyType = type;
+  document.getElementById('qtyTypeShares').classList.toggle('active', type === 'shares');
+  document.getElementById('qtyTypePercent').classList.toggle('active', type === 'percent');
+  document.getElementById('stopQtyHeader').textContent = type === 'shares' ? 'Shares' : 'Percent (%)';
+  calculate();
+}
+
+function setExitQtyType(type) {
+  exitQtyType = type;
+  document.getElementById('exitQtyTypeShares').classList.toggle('active', type === 'shares');
+  document.getElementById('exitQtyTypePercent').classList.toggle('active', type === 'percent');
+  document.getElementById('exitQtyHeader').textContent = type === 'shares' ? 'Shares/Contracts' : 'Percent (%)';
+  calculate();
+}
+
+function addRow(containerId, price = '', qty = '') {
+  const container = document.getElementById(containerId);
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.innerHTML = `
+    <input type="number" step="any" placeholder="Price" value="${price}" oninput="calculate()">
+    <input type="number" step="any" placeholder="Qty" value="${qty}" oninput="calculate()">
+    <button class="remove-btn" onclick="removeRow(this)">×</button>
+  `;
+  container.appendChild(row);
+  calculate();
+}
+
+function addStopRow(price = '', qty = '') {
+  const container = document.getElementById('stopsContainer');
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.innerHTML = `
+    <input type="number" step="any" placeholder="Stop Price" value="${price}" oninput="calculate()">
+    <input type="number" step="any" placeholder="${qtyType === 'shares' ? 'Shares' : '%'}" value="${qty}" oninput="calculate()">
+    <button class="remove-btn" onclick="removeRow(this)">×</button>
+  `;
+  container.appendChild(row);
+  calculate();
+}
+
+function addExitRow(price = '', qty = '') {
+  const container = document.getElementById('exitsContainer');
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.innerHTML = `
+    <input type="number" step="any" placeholder="Price" value="${price}" oninput="calculate()">
+    <input type="number" step="any" placeholder="${exitQtyType === 'shares' ? 'Qty' : '%'}" value="${qty}" oninput="calculate()">
+    <button class="remove-btn" onclick="removeRow(this)">×</button>
+  `;
+  container.appendChild(row);
+  calculate();
+}
+
+function removeRow(btn) {
+  btn.closest('.row').remove();
+  calculate();
+}
+
+function getRowsData(containerId) {
+  const rows = document.querySelectorAll(`#${containerId} .row`);
+  const data = [];
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const price = parseFloat(inputs[0].value);
+    const qty = parseFloat(inputs[1].value);
+    if (!isNaN(price) && !isNaN(qty) && qty > 0) data.push({ price, qty });
+  });
+  return data;
+}
+
+function fmt(n, decimals = 2) {
+  if (!isFinite(n)) return '–';
+  return n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function calculate() {
+  const entries = getRowsData('entriesContainer');
+  const exits = getRowsData('exitsContainer');
+  const totalEntryShares = entries.reduce((s, e) => s + e.qty, 0);
+  const totalExitShares = exits.reduce((s, e) => s + e.qty, 0);
+
+  let avgEntry = null, avgExit = null, totalRisk = null, totalReward = null, rMultiple = null;
+
+  if (totalEntryShares > 0) {
+    avgEntry = entries.reduce((s, e) => s + e.price * e.qty, 0) / totalEntryShares;
+  }
+  if (totalExitShares > 0) {
+    avgExit = exits.reduce((s, e) => s + e.price * e.qty, 0) / totalExitShares;
+  }
+
+  // --- Risk calculation ---
+  if (stopMode === 'single') {
+    const stop = parseFloat(document.getElementById('stopLoss').value);
+    if (avgEntry !== null && !isNaN(stop)) {
+      const riskPerShare = direction === 'long' ? (avgEntry - stop) : (stop - avgEntry);
+      totalRisk = riskPerShare * totalEntryShares;
+    }
+    document.getElementById('allocationNote').style.display = 'none';
+  } else {
+    const stopRows = getRowsData('stopsContainer');
+    const noteEl = document.getElementById('allocationNote');
+    noteEl.style.display = 'block';
+
+    if (avgEntry !== null && stopRows.length > 0 && totalEntryShares > 0) {
+      let stopShareRows = [];
+      if (qtyType === 'percent') {
+        const totalPct = stopRows.reduce((s, r) => s + r.qty, 0);
+        stopShareRows = stopRows.map(r => ({ price: r.price, qty: (r.qty / 100) * totalEntryShares }));
+        if (Math.abs(totalPct - 100) > 0.01) {
+          noteEl.className = 'allocation-note warn';
+          noteEl.textContent = `Stop allocation totals ${fmt(totalPct,1)}% — should equal 100% of position.`;
+        } else {
+          noteEl.className = 'allocation-note ok';
+          noteEl.textContent = `Stop allocation covers 100% of position (${fmt(totalEntryShares,0)} shares) across ${stopRows.length} level(s).`;
+        }
+      } else {
+        stopShareRows = stopRows;
+        const totalStopShares = stopRows.reduce((s, r) => s + r.qty, 0);
+        if (Math.abs(totalStopShares - totalEntryShares) > 0.001) {
+          noteEl.className = 'allocation-note warn';
+          noteEl.textContent = `Stop shares total ${fmt(totalStopShares,0)} vs position size ${fmt(totalEntryShares,0)} — mismatch. Risk calc uses stop rows as entered.`;
+        } else {
+          noteEl.className = 'allocation-note ok';
+          noteEl.textContent = `Stop allocation matches full position (${fmt(totalEntryShares,0)} shares) across ${stopRows.length} level(s).`;
+        }
+      }
+
+      totalRisk = stopShareRows.reduce((sum, r) => {
+        const riskPerShare = direction === 'long' ? (avgEntry - r.price) : (r.price - avgEntry);
+        return sum + riskPerShare * r.qty;
+      }, 0);
+    } else {
+      noteEl.className = 'allocation-note';
+      noteEl.textContent = 'Enter entries and at least one stop level to check allocation.';
+    }
+  }
+
+  // --- Reward calculation ---
+  const exitNoteEl = document.getElementById('exitAllocationNote');
+  let exitShareRows = [];
+
+  if (avgEntry !== null && exits.length > 0 && totalEntryShares > 0) {
+    if (exitQtyType === 'percent') {
+      const totalExitPct = exits.reduce((s, r) => s + r.qty, 0);
+      exitShareRows = exits.map(r => ({ price: r.price, qty: (r.qty / 100) * totalEntryShares }));
+      if (totalExitPct > 100.01) {
+        exitNoteEl.className = 'allocation-note warn';
+        exitNoteEl.textContent = `Exit allocation totals ${fmt(totalExitPct,1)}% — exceeds 100% of position.`;
+      } else if (totalExitPct < 99.99) {
+        exitNoteEl.className = 'allocation-note';
+        exitNoteEl.textContent = `Exit allocation covers ${fmt(totalExitPct,1)}% of position (${fmt(totalExitPct/100*totalEntryShares,0)} of ${fmt(totalEntryShares,0)} shares closed).`;
+      } else {
+        exitNoteEl.className = 'allocation-note ok';
+        exitNoteEl.textContent = `Exit allocation covers 100% of position (${fmt(totalEntryShares,0)} shares) across ${exits.length} exit(s).`;
+      }
+    } else {
+      exitShareRows = exits;
+      const totalExitSharesCheck = exits.reduce((s, r) => s + r.qty, 0);
+      if (totalExitSharesCheck > totalEntryShares + 0.001) {
+        exitNoteEl.className = 'allocation-note warn';
+        exitNoteEl.textContent = `Exit shares total ${fmt(totalExitSharesCheck,0)} — exceeds position size ${fmt(totalEntryShares,0)}.`;
+      } else if (totalExitSharesCheck < totalEntryShares - 0.001) {
+        exitNoteEl.className = 'allocation-note';
+        exitNoteEl.textContent = `${fmt(totalExitSharesCheck,0)} of ${fmt(totalEntryShares,0)} shares closed so far.`;
+      } else {
+        exitNoteEl.className = 'allocation-note ok';
+        exitNoteEl.textContent = `Full position closed (${fmt(totalEntryShares,0)} shares) across ${exits.length} exit(s).`;
+      }
+    }
+
+    totalReward = exitShareRows.reduce((sum, e) => {
+      const plPerShare = direction === 'long' ? (e.price - avgEntry) : (avgEntry - e.price);
+      return sum + plPerShare * e.qty;
+    }, 0);
+  } else {
+    exitNoteEl.className = 'allocation-note';
+    exitNoteEl.textContent = 'Enter entries and at least one exit to check allocation.';
+  }
+
+  if (totalRisk !== null && totalRisk !== 0 && totalReward !== null) {
+    rMultiple = totalReward / totalRisk;
+  }
+
+  document.getElementById('avgEntry').textContent = avgEntry !== null ? fmt(avgEntry, 4) : '–';
+  document.getElementById('avgExit').textContent = avgExit !== null ? fmt(avgExit, 4) : '–';
+  document.getElementById('totalShares').textContent = totalEntryShares > 0 ? fmt(totalEntryShares, 0) : '–';
+  let displayClosedShares = totalExitShares;
+  if (exitQtyType === 'percent' && exitShareRows.length > 0) {
+    displayClosedShares = exitShareRows.reduce((s, r) => s + r.qty, 0);
+  }
+  document.getElementById('closedShares').textContent = displayClosedShares > 0 ? fmt(displayClosedShares, 0) : '–';
+
+  const riskEl = document.getElementById('totalRisk');
+  riskEl.textContent = totalRisk !== null ? `$${fmt(Math.abs(totalRisk))}` : '–';
+  riskEl.className = 'value ' + (totalRisk !== null ? 'negative' : 'neutral');
+
+  const rewardEl = document.getElementById('totalReward');
+  rewardEl.textContent = totalReward !== null ? `${totalReward >= 0 ? '' : '-'}$${fmt(Math.abs(totalReward))}` : '–';
+  rewardEl.className = 'value ' + (totalReward !== null ? (totalReward >= 0 ? 'positive' : 'negative') : 'neutral');
+
+  const rEl = document.getElementById('rMultiple');
+  rEl.textContent = rMultiple !== null ? `${fmt(rMultiple)}R` : '–';
+  rEl.className = 'value ' + (rMultiple !== null ? (rMultiple >= 0 ? 'positive' : 'negative') : 'neutral');
+}
+
+addRow('entriesContainer');
+addExitRow();
+calculate();
+</script>
+</body>
+</html>
