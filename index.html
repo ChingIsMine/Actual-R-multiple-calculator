@@ -254,10 +254,10 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
       <button class="tf-btn" id="tf1h" onclick="setTF('1h')">1h</button>
       <button class="tf-btn" id="tf1d" onclick="setTF('1d')">1d</button>
       <span class="date-sep">|</span>
-      <input type="date" id="dateFrom" title="From date (leave blank for rolling range)" onchange="onDateChange()">
+      <input type="date" id="dateFrom" title="From date" onchange="onDateChange()">
       <span class="date-sep">&#x2192;</span>
-      <input type="date" id="dateTo" title="To date (leave blank for today)" onchange="onDateChange()">
-      <button class="today-btn" onclick="clearDates()" title="Clear dates &#x2014; use rolling range">Today</button>
+      <input type="date" id="dateTo" title="To date" onchange="onDateChange()">
+      <button class="today-btn" onclick="clearDates()">Today</button>
       <button class="load-btn" onclick="loadChart()">Load</button>
       <span id="chartStatus" style="font-size:0.75rem;color:#7d8290;"></span>
     </div>
@@ -304,71 +304,69 @@ function utcToEtWallClock(utcSeconds) {
   ) / 1000);
 }
 
-// ─── Session shading primitive ───────────────────────────────────────────────
-// Implements ISeriesPrimitive so it draws directly in the chart render loop.
-// Pre-market  04:00–09:29 ET → orange rgba(255,152,0,0.15)
-// Post-market 16:00–20:00 ET → blue   rgba(41,98,255,0.15)
-class SessionShadingPrimitive {
-  constructor(candles) {
+// ─── Session shading — correct ISeriesPrimitive three-class structure ─────────
+// SessionRenderer  → has draw() / drawBackground()
+// SessionPaneView  → has renderer() and zOrder()
+// SessionShadingPrimitive → has paneViews(), updateAllViews(), attached(), detached()
+
+class SessionRenderer {
+  constructor(candles, chartRef) {
     this._candles = candles;
-    this._series  = null;
+    this._chart   = chartRef;
   }
-  attached(params) { this._series = params.series; }
-  detached()       { this._series = null; }
-  updateAllViews() {}
-  paneViews()      { return [this]; }
+  // drawBackground renders behind the candles
+  drawBackground(target) { this._paint(target); }
+  draw(target) {}  // nothing needed in foreground
 
-  // Called by the chart renderer for each pane view
-  renderer() { return this; }
+  _paint(target) {
+    if (!this._chart || this._candles.length === 0) return;
+    const ts = this._chart.timeScale();
 
-  draw(target) {
-    if (!this._series || this._candles.length === 0) return;
     target.useBitmapCoordinateSpace(scope => {
       const ctx = scope.context;
+      const W   = scope.bitmapSize.width;
       const H   = scope.bitmapSize.height;
-      const pr  = scope.horizontalPixelRatio;   // pixel ratio for x scaling
+      const pr  = scope.horizontalPixelRatio;
 
-      // Estimate bar width in bitmap pixels
+      // Bar width estimate in bitmap pixels
       let barW = 6 * pr;
       if (this._candles.length >= 2) {
-        const x0 = this._series.priceToCoordinate ? null :
-          (chart.timeScale().timeToCoordinate(this._candles[0].time));
-        const x1 = chart.timeScale().timeToCoordinate(this._candles[1].time);
-        const x0v = chart.timeScale().timeToCoordinate(this._candles[0].time);
-        if (x0v !== null && x1 !== null) barW = Math.abs((x1 - x0v) * pr);
+        const x0 = ts.timeToCoordinate(this._candles[0].time);
+        const x1 = ts.timeToCoordinate(this._candles[1].time);
+        if (x0 !== null && x1 !== null) barW = Math.abs((x1 - x0) * pr);
       }
       if (barW < 1) barW = 1;
 
-      let spanX = null, spanRight = null, spanColor = null;
+      let spanL = null, spanR = null, spanColor = null;
 
       const flush = () => {
-        if (spanX === null) return;
+        if (spanL === null) return;
         ctx.fillStyle = spanColor;
-        ctx.fillRect(spanX - barW / 2, 0, spanRight - spanX + barW, H);
-        spanX = spanRight = spanColor = null;
+        ctx.fillRect(spanL, 0, spanR - spanL, H);
+        spanL = spanR = spanColor = null;
       };
 
       for (const c of this._candles) {
-        const secs = (() => {
-          const d = new Date(c.time * 1000);
-          return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds();
-        })();
-        const isPre  = secs >= 4*3600 && secs < 9*3600 + 30*60;
+        const d    = new Date(c.time * 1000);
+        const secs = d.getUTCHours() * 3600 + d.getUTCMinutes() * 60;
+        const isPre  = secs >= 4*3600  && secs <  9*3600 + 30*60;
         const isPost = secs >= 16*3600 && secs <= 20*3600;
         const color  = isPre  ? 'rgba(255,152,0,0.15)'
                      : isPost ? 'rgba(41,98,255,0.15)'
                      : null;
 
-        const xRaw = chart.timeScale().timeToCoordinate(c.time);
-        if (xRaw === null) { flush(); continue; }
-        const x = xRaw * pr;
+        const xCss = ts.timeToCoordinate(c.time);
+        if (xCss === null) { flush(); continue; }
+        const x = xCss * pr;
+        if (x < -barW || x > W + barW) { flush(); continue; }
 
         if (color) {
           if (spanColor === color) {
-            spanRight = x;
+            spanR = x + barW / 2;
           } else {
             flush();
-            spanX = spanRight = x;
+            spanL = x - barW / 2;
+            spanR = x + barW / 2;
             spanColor = color;
           }
         } else {
@@ -380,6 +378,25 @@ class SessionShadingPrimitive {
   }
 }
 
+class SessionPaneView {
+  constructor(candles, chartRef) {
+    this._renderer = new SessionRenderer(candles, chartRef);
+  }
+  zOrder()    { return 'bottom'; }
+  renderer()  { return this._renderer; }
+}
+
+class SessionShadingPrimitive {
+  constructor(candles, chartRef) {
+    this._view = new SessionPaneView(candles, chartRef);
+  }
+  attached()        {}
+  detached()        {}
+  updateAllViews()  {}
+  paneViews()       { return [this._view]; }
+}
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
 function setDirection(dir) {
   direction = dir;
   document.getElementById('btnLong').classList.toggle('active-long', dir === 'long');
@@ -404,10 +421,10 @@ function setTapMode(mode) {
   ['tapNone','tapEntry','tapStop','tapExit'].forEach(id => document.getElementById(id).className = 'tap-btn');
   const labels = { none:'', entry:'&#x2192; tap chart to add entry price', stop:'&#x2192; tap chart to set stop on latest entry', exit:'&#x2192; tap chart to add exit price' };
   document.getElementById('tapModeLabel').innerHTML = labels[mode];
-  if (mode==='none') document.getElementById('tapNone').classList.add('active-entry');
+  if (mode==='none')  document.getElementById('tapNone').classList.add('active-entry');
   if (mode==='entry') document.getElementById('tapEntry').classList.add('active-entry');
-  if (mode==='stop') document.getElementById('tapStop').classList.add('active-stop');
-  if (mode==='exit') document.getElementById('tapExit').classList.add('active-exit');
+  if (mode==='stop')  document.getElementById('tapStop').classList.add('active-stop');
+  if (mode==='exit')  document.getElementById('tapExit').classList.add('active-exit');
   if (chart) chart.applyOptions({ handleScroll: mode==='none', handleScale: mode==='none' });
 }
 function setTF(tf) {
@@ -535,7 +552,7 @@ async function loadChart() {
   const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
   if (!ticker) return;
   const statusEl = document.getElementById('chartStatus');
-  statusEl.textContent = 'Loading\u2026';
+  statusEl.textContent = 'Loading…';
   document.getElementById('chartHint').style.display = 'none';
 
   const apiUrl = buildApiUrl(ticker);
@@ -548,12 +565,12 @@ async function loadChart() {
 
   let json = null;
   for (const url of proxies) {
-    statusEl.textContent = 'Trying\u2026';
+    statusEl.textContent = 'Trying…';
     json = await tryFetch(url);
     if (json) break;
   }
   if (!json) {
-    statusEl.textContent = 'Failed \u2014 check ticker';
+    statusEl.textContent = 'Failed — check ticker';
     setStatus('Could not load "' + ticker + '". Check the symbol or try a different date range.');
     return;
   }
@@ -573,17 +590,20 @@ async function loadChart() {
 
     sessionCandles = candles;
     initChart();
-    // Attach the session shading primitive BEFORE setData so it renders behind candles
-    const primitive = new SessionShadingPrimitive(candles);
+
+    // Attach primitive BEFORE setData — draws behind candles via drawBackground
+    const primitive = new SessionShadingPrimitive(candles, chart);
     candleSeries.attachPrimitive(primitive);
+
     candleSeries.setData(candles);
     chart.timeScale().fitContent();
 
     const fromVal    = document.getElementById('dateFrom').value;
     const rangeLabel = fromVal ? fromVal : tfRange[currentTF];
-    statusEl.textContent = `${ticker} \u00b7 ${candles.length} bars \u00b7 ET`;
-    setStatus(`${ticker} loaded (${rangeLabel}, pre/post-market included) \u2014 axis shows U.S. ET \u2014 select a tap mode, then tap price levels.`);
+    statusEl.textContent = `${ticker} · ${candles.length} bars · ET`;
+    setStatus(`${ticker} loaded (${rangeLabel}, pre/post-market included) — axis shows U.S. ET — select a tap mode, then tap price levels.`);
   } catch(e) {
+    console.error(e);
     statusEl.textContent = 'Parse error';
     setStatus('Chart data parse failed. Try a different timeframe or date range.');
   }
@@ -643,7 +663,7 @@ function getExits(totalEntryShares) {
 }
 
 // ─── Calculate ────────────────────────────────────────────────────────────────
-function fmt(n, d=2) { if (!isFinite(n)) return '\u2013'; return n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fmt(n, d=2) { if (!isFinite(n)) return '–'; return n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
 
 function calculate() {
   const entries = getEntries();
@@ -654,7 +674,7 @@ function calculate() {
 
   if (!entries.length) {
     ['avgEntry','totalShares','totalRisk','totalReward','rMultiple'].forEach(id => {
-      document.getElementById(id).textContent='\u2013';
+      document.getElementById(id).textContent='–';
       document.getElementById(id).className='value neutral';
     });
     document.getElementById('setupTableBody').innerHTML = '';
@@ -700,13 +720,13 @@ function calculate() {
   rewEl.textContent=(totalReward>=0?'':'-')+'$'+fmt(Math.abs(totalReward));
   rewEl.className='value '+(totalReward>=0?'positive':'negative');
   const rEl=document.getElementById('rMultiple');
-  rEl.textContent=rMultiple!==null?fmt(rMultiple)+'R':'\u2013';
+  rEl.textContent=rMultiple!==null?fmt(rMultiple)+'R':'–';
   rEl.className='value '+(rMultiple!==null?(rMultiple>=0?'positive':'negative'):'neutral');
 
   const pct=totalEntryShares>0?totalExitShares/totalEntryShares*100:0;
   if (totalExitShares>totalEntryShares+0.001) { noteEl.className='alloc-note warn'; noteEl.textContent=`Exit qty (${fmt(totalExitShares,0)}, ${fmt(pct,1)}%) exceeds position size.`; }
-  else if (totalExitShares<totalEntryShares-0.001) { noteEl.className='alloc-note'; noteEl.textContent=`${fmt(totalExitShares,0)} of ${fmt(totalEntryShares,0)} shares closed (${fmt(pct,1)}% \u2014 still open).`; }
-  else { noteEl.className='alloc-note ok'; noteEl.textContent=`Full position closed (${fmt(totalEntryShares,0)} shares) \u2014 ${allocMode==='fifo'?'FIFO':'Pro-Rata'}.`; }
+  else if (totalExitShares<totalEntryShares-0.001) { noteEl.className='alloc-note'; noteEl.textContent=`${fmt(totalExitShares,0)} of ${fmt(totalEntryShares,0)} shares closed (${fmt(pct,1)}% — still open).`; }
+  else { noteEl.className='alloc-note ok'; noteEl.textContent=`Full position closed (${fmt(totalEntryShares,0)} shares) — ${allocMode==='fifo'?'FIFO':'Pro-Rata'}.`; }
 
   const map={};
   entries.forEach(e => {
@@ -719,7 +739,7 @@ function calculate() {
     const s=map[tag], r=(s.hasRisk&&s.risk!==0)?s.reward/s.risk:null;
     const rc=r===null?'neutral':(r>=0?'positive':'negative'), rewc=s.reward>=0?'positive':'negative';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td><span class="tag-pill">${tag}</span></td><td class="${rc}"><strong>${r!==null?fmt(r)+'R':'\u2013'}</strong></td><td>${fmt(s.size,0)}</td><td>${s.hasRisk?'$'+fmt(Math.abs(s.risk)):'\u2013'}</td><td class="${rewc}">${s.reward>=0?'':'-'}$${fmt(Math.abs(s.reward))}</td>`;
+    tr.innerHTML=`<td><span class="tag-pill">${tag}</span></td><td class="${rc}"><strong>${r!==null?fmt(r)+'R':'–'}</strong></td><td>${fmt(s.size,0)}</td><td>${s.hasRisk?'$'+fmt(Math.abs(s.risk)):'–'}</td><td class="${rewc}">${s.reward>=0?'':'-'}$${fmt(Math.abs(s.reward))}</td>`;
     tbody.appendChild(tr);
   });
 }
