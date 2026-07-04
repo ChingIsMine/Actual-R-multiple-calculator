@@ -277,16 +277,17 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
   </div>
 </div>
 
-<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<!-- Upgraded to v4.2.1: timezone option requires v4.2+ -->
+<script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
 <script>
 let direction = 'long', allocMode = 'fifo', exitMode = 'shares', tapMode = 'none', currentTF = '1m';
 let chart = null, candleSeries = null, priceLines = [];
 
-// Yahoo Finance API hard limits per interval
 const tfMap   = { '1m':'1m',  '5m':'5m',  '15m':'15m', '1h':'60m', '1d':'1d' };
 const tfRange = { '1m':'7d',  '5m':'60d', '15m':'60d', '1h':'730d','1d':'2y' };
 
-// Always show U.S. Eastern Time regardless of user's local timezone
+// All charts display in U.S. Eastern Time (ET)
+// timezone option was introduced in lightweight-charts v4.2.0
 const CHART_TZ = 'America/New_York';
 
 function setDirection(dir) {
@@ -335,7 +336,6 @@ function clearDates() {
   document.getElementById('dateFrom').classList.remove('date-active');
   document.getElementById('dateTo').classList.remove('date-active');
 }
-
 function clearLines() {
   if (candleSeries && priceLines.length) {
     priceLines.forEach(line => { try { candleSeries.removePriceLine(line); } catch(e) {} });
@@ -346,9 +346,7 @@ function clearLines() {
 function clearAll() {
   document.getElementById('entriesContainer').innerHTML = '';
   document.getElementById('exitsContainer').innerHTML = '';
-  addEntryRow();
-  addExitRow();
-  clearLines();
+  addEntryRow(); addExitRow(); clearLines();
   setStatus('All entries, exits, and chart lines cleared.');
 }
 
@@ -356,7 +354,8 @@ function initChart() {
   const container = document.getElementById('chartContainer');
   if (chart) { chart.remove(); chart = null; candleSeries = null; priceLines = []; }
   chart = LightweightCharts.createChart(container, {
-    width: container.clientWidth, height: container.clientHeight,
+    width: container.clientWidth,
+    height: container.clientHeight,
     layout: { background: { color: '#0a0c10' }, textColor: '#9aa0ac' },
     grid: { vertLines: { color: '#1a1d26' }, horzLines: { color: '#1a1d26' } },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
@@ -365,7 +364,7 @@ function initChart() {
       borderColor: '#262b3a',
       timeVisible: true,
       secondsVisible: false,
-      timezone: CHART_TZ,   // always U.S. ET — open bar shows 09:30
+      timezone: CHART_TZ,  // requires v4.2+ — open bar 09:30 ET, pre-mkt from 04:00
     },
   });
   candleSeries = chart.addCandlestickSeries({
@@ -382,7 +381,9 @@ function initChart() {
     else if (tapMode==='stop') handleTapStop(p);
     else if (tapMode==='exit') handleTapExit(p);
   });
-  window.addEventListener('resize', () => { if(chart) chart.applyOptions({ width: container.clientWidth, height: container.clientHeight }); });
+  window.addEventListener('resize', () => {
+    if (chart) chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+  });
 }
 
 function addPriceLine(price, color, title) {
@@ -391,7 +392,6 @@ function addPriceLine(price, color, title) {
   priceLines.push(line);
   return line;
 }
-
 function handleTapEntry(price) {
   addEntryRow('', price, '', '');
   addPriceLine(price, '#4ade80', 'E');
@@ -414,15 +414,12 @@ function handleTapExit(price) {
 }
 function setStatus(msg) { document.getElementById('statusBar').textContent = msg; }
 
-// ─── Build API URL ───────────────────────────────────────────────────
+// ─── Build API URL (includePrePost=true for pre/post-market bars) ───────────
 function buildApiUrl(ticker) {
   const interval = tfMap[currentTF];
   const fromVal  = document.getElementById('dateFrom').value;
   const toVal    = document.getElementById('dateTo').value;
-
-  // includePrePost=true — fetch pre-market (04:00) and post-market (20:00) bars
   const base = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&includePrePost=true`;
-
   if (fromVal) {
     const p1 = Math.floor(new Date(fromVal + 'T00:00:00').getTime() / 1000);
     let endDate;
@@ -436,14 +433,13 @@ function buildApiUrl(ticker) {
     }
     const p2 = Math.floor(endDate.getTime() / 1000);
     return `${base}&period1=${p1}&period2=${p2}`;
-  } else {
-    return `${base}&range=${tfRange[currentTF]}`;
   }
+  return `${base}&range=${tfRange[currentTF]}`;
 }
 
-async function tryFetch(proxyUrl, timeout = 9000) {
+async function tryFetch(url, timeout = 9000) {
   try {
-    const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(timeout) });
+    const res = await fetch(url, { signal: AbortSignal.timeout(timeout) });
     if (!res.ok) return null;
     const data = await res.json();
     return data?.chart?.result?.[0] ? data : null;
@@ -471,7 +467,6 @@ async function loadChart() {
     json = await tryFetch(url);
     if (json) break;
   }
-
   if (!json) {
     statusEl.textContent = 'Failed — check ticker';
     setStatus('Could not load "' + ticker + '". Check the symbol or try a different date range.');
@@ -490,15 +485,14 @@ async function loadChart() {
       close: q.close[i] ? +q.close[i].toFixed(4) : null,
     })).filter(c => c.open && c.high && c.low && c.close);
 
-    // Re-init chart (always ET) then load data
     initChart();
     candleSeries.setData(candles);
     chart.timeScale().fitContent();
 
-    const fromVal = document.getElementById('dateFrom').value;
+    const fromVal    = document.getElementById('dateFrom').value;
     const rangeLabel = fromVal ? fromVal : tfRange[currentTF];
-    statusEl.textContent = ticker + ' · ' + candles.length + ' bars · ET';
-    setStatus(ticker + ' loaded (' + rangeLabel + ', incl. pre/post-market) — times shown in U.S. ET — select a tap mode, then tap price levels.');
+    statusEl.textContent = `${ticker} · ${candles.length} bars · ET`;
+    setStatus(`${ticker} loaded (${rangeLabel}, pre/post-market included) — times in U.S. ET — select a tap mode, then tap price levels.`);
   } catch(e) {
     statusEl.textContent = 'Parse error';
     setStatus('Chart data parse failed. Try a different timeframe or date range.');
@@ -569,7 +563,10 @@ function calculate() {
   const noteEl = document.getElementById('allocationNote');
 
   if (!entries.length) {
-    ['avgEntry','totalShares','totalRisk','totalReward','rMultiple'].forEach(id => { document.getElementById(id).textContent='–'; document.getElementById(id).className='value neutral'; });
+    ['avgEntry','totalShares','totalRisk','totalReward','rMultiple'].forEach(id => {
+      document.getElementById(id).textContent='–';
+      document.getElementById(id).className='value neutral';
+    });
     document.getElementById('setupTableBody').innerHTML = '';
     noteEl.className='alloc-note'; noteEl.textContent='Enter entries and exits to see allocation.';
     return;
