@@ -23,7 +23,17 @@ body {
   overflow-y: auto;
   padding: 16px;
 }
-h1 { font-size: 1.2rem; color: #fff; margin-bottom: 2px; }
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;
+}
+h1 { font-size: 1.2rem; color: #fff; }
+.clear-all-btn {
+  padding: 5px 11px; border-radius: 7px;
+  background: #2a1620; color: #ff6b81; border: 1px solid #4a2030;
+  cursor: pointer; font-size: 0.72rem; font-weight: 700; white-space: nowrap;
+  transition: background 0.15s;
+}
+.clear-all-btn:hover { background: #3a1e28; }
 .subtitle { color: #7d8290; font-size: 0.78rem; margin-bottom: 14px; }
 .card {
   background: #161923;
@@ -141,6 +151,13 @@ table.setup-table th { color: #7d8290; font-size: 0.65rem; text-transform: upper
 .tap-btn.active-entry { background: #10231d; color: #4ade80; border-color: #235c43; }
 .tap-btn.active-exit { background: #1c1730; color: #a78bfa; border-color: #302650; }
 .tap-btn.active-stop { background: #2a1620; color: #ff6b81; border-color: #4a2030; }
+.clear-lines-btn {
+  padding: 5px 10px; border-radius: 6px; border: 1px solid #40301e;
+  background: #1e1509; color: #ff9f5b; cursor: pointer; font-size: 0.72rem;
+  white-space: nowrap; margin-left: auto;
+  transition: background 0.15s;
+}
+.clear-lines-btn:hover { background: #2a1c0c; }
 #chartContainer { flex: 1; position: relative; min-height: 0; }
 .chart-hint {
   position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
@@ -157,7 +174,10 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
 <body>
 <div class="app-layout">
   <div class="left-panel">
-    <h1>Actual R Calculator</h1>
+    <div class="panel-header">
+      <h1>Actual R Calculator</h1>
+      <button class="clear-all-btn" onclick="clearAll()">&#x1F5D1; Clear All</button>
+    </div>
     <div class="subtitle">Tap chart levels to set prices. Blended + per-setup R-multiple.</div>
     <div class="card">
       <h2>Direction</h2>
@@ -229,7 +249,8 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
       <button class="tap-btn" id="tapEntry" onclick="setTapMode('entry')">+ Entry</button>
       <button class="tap-btn" id="tapStop" onclick="setTapMode('stop')">Set Stop</button>
       <button class="tap-btn" id="tapExit" onclick="setTapMode('exit')">+ Exit</button>
-      <span id="tapModeLabel" style="font-size:0.72rem;color:#4fd1c5;margin-left:4px;"></span>
+      <span id="tapModeLabel" style="font-size:0.72rem;color:#4fd1c5;"></span>
+      <button class="clear-lines-btn" onclick="clearLines()">Clear Lines</button>
     </div>
     <div id="chartContainer">
       <div class="chart-hint" id="chartHint">Enter a ticker and click "Load Chart" to begin</div>
@@ -276,6 +297,26 @@ function setTapMode(mode) {
 function setTF(tf) {
   currentTF = tf;
   ['1m','5m','15m','1h','1d'].forEach(t => { const el = document.getElementById('tf'+t); if(el) el.classList.toggle('active', t===tf); });
+}
+
+// ─── Clear functions ────────────────────────────────────────────────────────────
+function clearLines() {
+  if (candleSeries && priceLines.length) {
+    priceLines.forEach(line => { try { candleSeries.removePriceLine(line); } catch(e) {} });
+    priceLines = [];
+    setStatus('Chart price lines cleared.');
+  }
+}
+
+function clearAll() {
+  // Clear entry and exit rows, then add fresh blank ones
+  document.getElementById('entriesContainer').innerHTML = '';
+  document.getElementById('exitsContainer').innerHTML = '';
+  addEntryRow();
+  addExitRow();
+  // Clear chart price lines
+  clearLines();
+  setStatus('All entries, exits, and chart lines cleared.');
 }
 
 function initChart() {
