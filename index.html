@@ -1,1 +1,1007 @@
-# placeholder — replaced in next step
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Actual R Calculator</title>
+<style>
+:root {
+  --bg-page: #0f1117;
+  --bg-surface2: #0a0c10;
+  --bg-card: #161923;
+  --bg-toolbar: #0d0f18;
+  --border-color: #262b3a;
+  --input-border: #2c3140;
+  --text-primary: #e6e6e6;
+  --text-secondary: #9aa0ac;
+  --text-muted: #7d8290;
+  --text-faint: #565b68;
+  --input-color-scheme: dark;
+  --heading-color: #ffffff;
+}
+body.light-theme {
+  --bg-page: #f5f6fa;
+  --bg-surface2: #eceef3;
+  --bg-card: #ffffff;
+  --bg-toolbar: #eceef3;
+  --border-color: #d7dae2;
+  --input-border: #c5c9d3;
+  --text-primary: #1c1e26;
+  --text-secondary: #565b68;
+  --text-muted: #6b7080;
+  --text-faint: #9aa0ac;
+  --input-color-scheme: light;
+  --heading-color: #0f1117;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+.app-layout {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  min-height: 100vh;
+}
+.left-panel {
+  background: var(--bg-page);
+  border-right: 1px solid var(--border-color);
+  overflow-y: auto;
+  padding: 16px;
+}
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;
+}
+h1 { font-size: 1.2rem; color: var(--heading-color); }
+.clear-all-btn {
+  padding: 5px 11px; border-radius: 7px;
+  background: #2a1620; color: #ff6b81; border: 1px solid #4a2030;
+  cursor: pointer; font-size: 0.72rem; font-weight: 700; white-space: nowrap;
+  transition: background 0.15s;
+}
+.clear-all-btn:hover { background: #3a1e28; }
+.theme-toggle-btn {
+  padding: 5px 11px; border-radius: 7px;
+  background: var(--bg-toolbar); color: var(--text-secondary); border: 1px solid var(--input-border);
+  cursor: pointer; font-size: 0.72rem; font-weight: 700; white-space: nowrap;
+  transition: background 0.15s;
+}
+.theme-toggle-btn:hover { background: var(--bg-card); }
+.subtitle { color: var(--text-muted); font-size: 0.78rem; margin-bottom: 14px; }
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.card h2 { font-size: 0.9rem; margin-bottom: 10px; color: #4fd1c5; }
+.card h2.exit-color { color: #a78bfa; }
+.card h2.setup-color { color: #ff9f5b; }
+.card-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.card-header-row h2 { margin-bottom: 0; }
+.eye-btn {
+  background: var(--bg-page); border: 1px solid var(--input-border); color: var(--text-secondary);
+  border-radius: 6px; width: 28px; height: 26px; cursor: pointer; font-size: 0.85rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.eye-btn.active { background: #14202a; color: #4fd1c5; border-color: #1e3540; }
+.toggle-row { display: flex; gap: 6px; margin-bottom: 10px; }
+.toggle-row button {
+  flex: 1; padding: 7px 6px; border-radius: 7px; border: 1px solid var(--input-border);
+  background: var(--bg-page); color: var(--text-secondary); cursor: pointer; font-weight: 600; font-size: 0.78rem;
+}
+.toggle-row button.active-long { background: #10231d; color: #4ade80; border-color: #235c43; }
+.toggle-row button.active-short { background: #2a1620; color: #ff6b81; border-color: #4a2030; }
+.toggle-row button.active { background: #1c1730; color: #a78bfa; border-color: #302650; }
+.toggle-row button.active-teal { background: #14202a; color: #4fd1c5; border-color: #1e3540; }
+.row-entry {
+  display: grid;
+  grid-template-columns: 0.65fr 1.1fr 0.75fr 0.5fr 0.7fr auto;
+  gap: 4px; margin-bottom: 7px; align-items: center;
+}
+.row-exit {
+  display: grid;
+  grid-template-columns: 0.85fr 1.1fr 0.65fr auto;
+  gap: 4px; margin-bottom: 7px; align-items: center;
+}
+.row-header-entry {
+  display: grid;
+  grid-template-columns: 0.65fr 1.1fr 0.75fr 0.5fr 0.7fr auto;
+  gap: 4px; font-size: 0.62rem; color: var(--text-muted); margin-bottom: 4px;
+  text-transform: uppercase; letter-spacing: 0.02em;
+}
+.row-header-exit {
+  display: grid;
+  grid-template-columns: 0.85fr 1.1fr 0.65fr auto;
+  gap: 4px; font-size: 0.62rem; color: var(--text-muted); margin-bottom: 4px;
+  text-transform: uppercase; letter-spacing: 0.02em;
+}
+input[type=number], input[type=text] {
+  background: var(--bg-page); border: 1px solid var(--input-border); color: var(--text-primary);
+  padding: 6px 5px; border-radius: 6px; font-size: 0.78rem; width: 100%; min-width: 0;
+}
+input[type=datetime-local] {
+  background: var(--bg-page); border: 1px solid var(--input-border); color: var(--text-primary);
+  padding: 5px 2px; border-radius: 6px; font-size: 0.58rem; width: 100%; min-width: 0;
+  color-scheme: var(--input-color-scheme, dark);
+}
+input[type=date] {
+  background: var(--bg-page); border: 1px solid var(--input-border); color: var(--text-primary);
+  padding: 5px 7px; border-radius: 6px; font-size: 0.78rem;
+  color-scheme: var(--input-color-scheme, dark);
+}
+input[type=date].date-active { border-color: #a78bfa; background: #1a1430; }
+input.tapped { border-color: #4fd1c5; background: #0f1a1e; }
+input.input-error { border-color: #ff3b30 !important; background: #2a0f12 !important; }
+input:focus { outline: none; border-color: #4fd1c5; }
+.remove-btn {
+  background: #2a1620; color: #ff6b81; border: 1px solid #4a2030;
+  border-radius: 6px; width: 26px; height: 26px; cursor: pointer; font-size: 0.9rem;
+}
+.add-btn {
+  background: #14202a; color: #4fd1c5; border: 1px solid #1e3540;
+  border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 0.78rem; margin-top: 4px;
+}
+.add-btn.exit-btn { background: #1c1730; color: #a78bfa; border-color: #302650; }
+.results { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.result-box { background: var(--bg-page); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; }
+.result-box .label { font-size: 0.68rem; color: var(--text-secondary); margin-bottom: 2px; }
+.result-box .value { font-size: 1.15rem; font-weight: 700; }
+.result-box.full { grid-column: 1/-1; text-align: center; padding: 14px; }
+.result-box.full .value { font-size: 2rem; }
+.positive { color: #4ade80; }
+.negative { color: #ff6b81; }
+.neutral { color: var(--text-primary); }
+table.setup-table { width: 100%; border-collapse: collapse; }
+table.setup-table th, table.setup-table td {
+  text-align: left; padding: 6px 8px; font-size: 0.78rem; border-bottom: 1px solid var(--border-color);
+}
+table.setup-table th { color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; }
+.tag-pill {
+  display: inline-block; padding: 2px 6px; border-radius: 5px; font-size: 0.72rem;
+  background: #14202a; color: #4fd1c5; border: 1px solid #1e3540;
+}
+.alloc-note {
+  font-size: 0.72rem; color: var(--text-muted); margin-top: 6px; padding: 6px 8px;
+  background: var(--bg-page); border-radius: 6px; border: 1px solid var(--border-color);
+}
+.alloc-note.warn { color: #ff9f5b; border-color: #40301e; }
+.alloc-note.ok { color: #4ade80; border-color: #235c43; }
+.stop-error-note {
+  font-size: 0.72rem; color: #ff9f5b; margin-top: 6px; padding: 6px 8px;
+  background: #1e1509; border-radius: 6px; border: 1px solid #40301e; display: none;
+}
+.stop-error-note.show { display: block; }
+.method-explainer {
+  background: var(--bg-page); border: 1px solid var(--border-color); border-radius: 6px;
+  padding: 8px 10px; margin-top: 8px;
+}
+.method-item { font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 6px; }
+.method-item:last-child { margin-bottom: 0; }
+.method-item strong { color: #a78bfa; }
+.right-panel { display: flex; flex-direction: column; background: var(--bg-surface2); }
+.chart-toolbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; background: var(--bg-page); border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+.chart-toolbar input[type=text] { width: 80px; padding: 6px 8px; font-size: 0.85rem; text-transform: uppercase; }
+.tf-btn {
+  padding: 5px 9px; border-radius: 6px; border: 1px solid var(--input-border);
+  background: var(--bg-page); color: var(--text-secondary); cursor: pointer; font-size: 0.75rem; font-weight: 600;
+}
+.tf-btn.active { background: #14202a; color: #4fd1c5; border-color: #1e3540; }
+.load-btn {
+  padding: 6px 12px; border-radius: 6px; background: #4fd1c5; color: #0f1117;
+  border: none; cursor: pointer; font-weight: 700; font-size: 0.82rem;
+}
+.date-label { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+.today-btn {
+  padding: 5px 9px; border-radius: 6px; border: 1px solid #302650;
+  background: #1c1730; color: #a78bfa; cursor: pointer; font-size: 0.72rem; font-weight: 600;
+  white-space: nowrap;
+}
+.today-btn:hover { background: #231e3c; }
+.tap-mode-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; background: var(--bg-toolbar); border-bottom: 1px solid var(--border-color);
+  overflow-x: auto; flex-wrap: nowrap;
+}
+.tap-mode-bar span { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+.tap-btn {
+  padding: 5px 10px; border-radius: 6px; border: 1px solid var(--input-border);
+  background: var(--bg-page); color: var(--text-secondary); cursor: pointer; font-size: 0.72rem; white-space: nowrap;
+}
+.tap-btn.active-off  { background: #14202a; color: #4fd1c5; border-color: #1e3540; }
+.tap-btn.active-entry { background: #10231d; color: #4ade80; border-color: #235c43; }
+.tap-btn.active-exit  { background: #1c1730; color: #a78bfa; border-color: #302650; }
+.tap-btn.active-stop  { background: #2a1620; color: #ff6b81; border-color: #4a2030; }
+.tap-btn.active-delete { background: #2a1620; color: #ff6b81; border-color: #4a2030; }
+.delete-marker-btn {
+  padding: 5px 9px; border-radius: 6px; border: 1px solid #4a2030;
+  background: #1e0a0f; color: #ff6b81; cursor: pointer; font-size: 0.85rem;
+  white-space: nowrap; line-height: 1;
+}
+.delete-marker-btn:hover { background: #2a1018; }
+.clear-lines-btn {
+  padding: 5px 10px; border-radius: 6px; border: 1px solid #40301e;
+  background: #1e1509; color: #ff9f5b; cursor: pointer; font-size: 0.72rem;
+  white-space: nowrap; margin-left: auto;
+  transition: background 0.15s;
+}
+.clear-lines-btn:hover { background: #2a1c0c; }
+#chartContainer { flex: 1; position: relative; min-height: 0; }
+.chart-hint {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(15,17,23,0.85); border: 1px solid var(--border-color); border-radius: 8px;
+  padding: 7px 14px; font-size: 0.75rem; color: var(--text-secondary); pointer-events: none; white-space: nowrap;
+}
+.status-bar {
+  padding: 6px 14px; background: var(--bg-page); border-top: 1px solid var(--border-color);
+  font-size: 0.72rem; color: var(--text-muted);
+}
+footer { text-align: center; color: var(--text-faint); font-size: 0.7rem; padding: 6px; background: var(--bg-page); border-top: 1px solid var(--border-color); }
+.empty-hint { font-size: 0.72rem; color: var(--text-faint); padding: 4px 2px 8px; }
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <div class="left-panel">
+    <div class="panel-header">
+      <h1>Actual R Calculator</h1>
+      <div style="display:flex;gap:6px;">
+        <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">&#x2600;&#xFE0F; Light</button>
+        <button class="clear-all-btn" onclick="clearAll()">&#x1F5D1; Clear All</button>
+      </div>
+    </div>
+    <div class="subtitle">Tap chart levels to set prices. Blended + per-setup R-multiple.</div>
+
+    <div class="card">
+      <h2>Direction</h2>
+      <div class="toggle-row">
+        <button id="btnLong" class="active-long" onclick="setDirection('long')">LONG</button>
+        <button id="btnShort" onclick="setDirection('short')">SHORT</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="setup-color">Entries (by Setup)</h2>
+      <div class="row-header-entry"><div>Tag</div><div>Time</div><div>Entry</div><div>Qty</div><div>Stop</div><div></div></div>
+      <div id="entriesContainer"></div>
+      <div class="empty-hint" id="entriesEmptyHint">No entries yet &#x2014; tap the chart or click below.</div>
+      <div class="stop-error-note" id="stopErrorNote"></div>
+      <button class="add-btn" onclick="addEntryRow()">+ Add Entry</button>
+    </div>
+
+    <div class="card">
+      <h2 class="exit-color">Exits (Partials)</h2>
+      <div class="toggle-row">
+        <button id="exitShares" class="active-teal" onclick="setExitMode('shares')">Shares</button>
+        <button id="exitPct" onclick="setExitMode('percent')">%</button>
+      </div>
+      <div class="row-header-exit"><div>Exit Price</div><div>Time</div><div id="exitQtyHeader">Qty</div><div></div></div>
+      <div id="exitsContainer"></div>
+      <div class="empty-hint" id="exitsEmptyHint">No exits yet &#x2014; tap the chart or click below.</div>
+      <button class="add-btn exit-btn" onclick="addExitRow()">+ Add Exit</button>
+      <div style="margin-top:10px;font-size:0.72rem;color:var(--text-muted);">Exit attribution to setups:</div>
+      <div class="toggle-row" style="margin-top:5px;">
+        <button id="allocFifo" class="active" onclick="setAllocMode('fifo')">FIFO</button>
+        <button id="allocPro" onclick="setAllocMode('prorata')">Pro-Rata</button>
+      </div>
+      <div class="method-explainer">
+        <div class="method-item"><strong>FIFO (First In, First Out):</strong> exits close out your earliest entry first. Partial exits are credited entirely to the first tranche until fully closed, then move to the next. Mirrors how most brokers match closing fills against open lots.</div>
+        <div class="method-item"><strong>Pro-Rata (by size):</strong> every exit is split across all open setups proportionally by size. If ORB is 40% of your position and the add is 60%, every partial is divided 40/60 between them regardless of fill order.</div>
+      </div>
+      <div class="alloc-note" id="allocationNote">Enter entries and exits to see allocation.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header-row">
+        <h2>Blended Trade Results</h2>
+        <button class="eye-btn" id="eyeBlended" onclick="togglePrivacy('blended')" title="Hide size, risk &amp; reward">&#x1F441;</button>
+      </div>
+      <div class="results">
+        <div class="result-box"><div class="label">Avg Entry</div><div class="value neutral" id="avgEntry">&#x2013;</div></div>
+        <div class="result-box"><div class="label">Total Size</div><div class="value neutral" id="totalShares">&#x2013;</div></div>
+        <div class="result-box"><div class="label">Total Risk (1R)</div><div class="value neutral" id="totalRisk">&#x2013;</div></div>
+        <div class="result-box"><div class="label">Total Reward</div><div class="value neutral" id="totalReward">&#x2013;</div></div>
+        <div class="result-box"><div class="label">Hold Time</div><div class="value neutral" id="holdTime">&#x2013;</div></div>
+        <div class="result-box full"><div class="label">BLENDED ACTUAL R-MULTIPLE</div><div class="value neutral" id="rMultiple">&#x2013;</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header-row">
+        <h2 class="setup-color">Per-Setup Breakdown</h2>
+        <button class="eye-btn" id="eyeSetup" onclick="togglePrivacy('setup')" title="Hide size, risk &amp; reward">&#x1F441;</button>
+      </div>
+      <table class="setup-table">
+        <thead><tr><th>Setup</th><th>R-Multiple</th><th>Size</th><th>Risk</th><th>Reward</th><th>Hold</th></tr></thead>
+        <tbody id="setupTableBody"></tbody>
+      </table>
+    </div>
+
+    <footer>Actual R Calculator &#x2014; Tom's trading workflow</footer>
+  </div>
+
+  <div class="right-panel">
+    <div class="chart-toolbar">
+      <input type="text" id="tickerInput" placeholder="NVDA" value="NVDA">
+      <button class="tf-btn active" id="tf1m" onclick="setTF('1m')">1m</button>
+      <button class="tf-btn" id="tf5m" onclick="setTF('5m')">5m</button>
+      <button class="tf-btn" id="tf15m" onclick="setTF('15m')">15m</button>
+      <button class="tf-btn" id="tf1h" onclick="setTF('1h')">1h</button>
+      <button class="tf-btn" id="tf1d" onclick="setTF('1d')">1d</button>
+      <span class="date-label">End date:</span>
+      <input type="date" id="dateEnd" title="Load max bars up to this date. Leave blank for today." onchange="onDateChange()">
+      <button class="today-btn" onclick="clearDate()" title="Clear &#x2014; use today">Today</button>
+      <button class="load-btn" onclick="loadChart()">Load</button>
+      <span id="chartStatus" style="font-size:0.75rem;color:var(--text-muted);"></span>
+    </div>
+    <div class="tap-mode-bar">
+      <span>TAP TO SET:</span>
+      <button class="tap-btn active-off" id="tapNone" onclick="setTapMode('none')">Off</button>
+      <button class="tap-btn" id="tapEntry" onclick="setTapMode('entry')">+ Entry</button>
+      <button class="tap-btn" id="tapStop" onclick="setTapMode('stop')">Set Stop</button>
+      <button class="tap-btn" id="tapExit" onclick="setTapMode('exit')">+ Exit</button>
+      <button class="delete-marker-btn" id="tapDelete" onclick="setTapMode('delete')" title="Delete a single marker">&#x1F5D1;</button>
+      <span id="tapModeLabel" style="font-size:0.72rem;color:#4fd1c5;"></span>
+      <button class="clear-lines-btn" onclick="clearAll()">Clear Markers</button>
+    </div>
+    <div id="chartContainer">
+      <div class="chart-hint" id="chartHint">Enter a ticker and click "Load" to begin</div>
+    </div>
+    <div class="status-bar" id="statusBar">Ready &#x2014; load a chart, select a tap mode, then tap price levels to auto-fill entries/exits.</div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+let direction = 'long', allocMode = 'fifo', exitMode = 'shares', tapMode = 'none', currentTF = '1m';
+let chart = null, candleSeries = null;
+let sessionCandles = [];
+let markerPrimitive = null;
+let markerIdCounter = 1;
+let privacyBlended = false, privacySetup = false;
+
+let stopStep = null;
+let stopSelectedEntryId = null;
+
+const tfMap    = { '1m':'1m', '5m':'5m', '15m':'15m', '1h':'60m', '1d':'1d' };
+const tfOrder  = ['1m','5m','15m','1h','1d'];
+const tfWindow = { '1m':7, '5m':60, '15m':60, '1h':730, '1d':1825 };
+
+const COLOR_BLUE  = '#2f6fed';
+const COLOR_RED   = '#ff3b30';
+const COLOR_WHITE = '#ffffff';
+
+function epochToLocalInputStr(epochSecs) {
+  if (epochSecs === null || epochSecs === undefined || isNaN(epochSecs)) return '';
+  const d = new Date(epochSecs * 1000);
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+}
+function localInputStrToEpoch(str) {
+  if (!str) return null;
+  const t = Math.floor(new Date(str + 'Z').getTime() / 1000);
+  return isNaN(t) ? null : t;
+}
+function formatDuration(seconds) {
+  if (seconds === null || seconds === undefined || isNaN(seconds) || seconds < 0) return '\u2013';
+  const d = Math.floor(seconds/86400), h = Math.floor((seconds%86400)/3600), m = Math.floor((seconds%3600)/60);
+  const parts = [];
+  if (d > 0) parts.push(d+'d');
+  if (h > 0) parts.push(h+'h');
+  if (m > 0 || parts.length === 0) parts.push(m+'m');
+  return parts.join(' ');
+}
+
+function validateStopPrice(entryPrice, stopPrice, dir) {
+  if (isNaN(entryPrice) || isNaN(stopPrice)) return null;
+  if (dir === 'long'  && stopPrice >= entryPrice) return 'LONG stop must be BELOW the entry price.';
+  if (dir === 'short' && stopPrice <= entryPrice) return 'SHORT stop must be ABOVE the entry price.';
+  return null;
+}
+function showStopError(msg) {
+  const el = document.getElementById('stopErrorNote');
+  if (!el) return;
+  if (msg) { el.textContent = msg; el.classList.add('show'); }
+  else     { el.textContent = ''; el.classList.remove('show'); }
+}
+
+function togglePrivacy(which) {
+  if (which === 'blended') { privacyBlended = !privacyBlended; document.getElementById('eyeBlended').classList.toggle('active', privacyBlended); }
+  else                     { privacySetup   = !privacySetup;   document.getElementById('eyeSetup').classList.toggle('active', privacySetup); }
+  calculate();
+}
+
+function applyTheme(theme) {
+  const btn = document.getElementById('themeToggleBtn');
+  if (theme === 'light') {
+    document.body.classList.add('light-theme');
+    if (btn) btn.innerHTML = '&#x1F319; Dark';
+  } else {
+    document.body.classList.remove('light-theme');
+    if (btn) btn.innerHTML = '&#x2600;&#xFE0F; Light';
+  }
+  if (chart) {
+    const L = theme === 'light';
+    chart.applyOptions({
+      layout: { background: { color: L?'#ffffff':'#0a0c10' }, textColor: L?'#565b68':'#9aa0ac' },
+      grid:   { vertLines: { color: L?'#e4e6ec':'#1a1d26' }, horzLines: { color: L?'#e4e6ec':'#1a1d26' } },
+      rightPriceScale: { borderColor: L?'#d7dae2':'#262b3a' },
+      timeScale:       { borderColor: L?'#d7dae2':'#262b3a' },
+    });
+  }
+  try { localStorage.setItem('rCalcTheme', theme); } catch(e) {}
+}
+function toggleTheme() {
+  applyTheme(document.body.classList.contains('light-theme') ? 'dark' : 'light');
+}
+
+function utcToEtWallClock(utcSeconds) {
+  const ms = utcSeconds * 1000;
+  const fmtr = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+  });
+  const parts = fmtr.formatToParts(new Date(ms));
+  const p = {};
+  parts.forEach(({type,value}) => { p[type]=value; });
+  return Math.floor(Date.UTC(
+    parseInt(p.year), parseInt(p.month)-1, parseInt(p.day),
+    parseInt(p.hour), parseInt(p.minute), parseInt(p.second)
+  )/1000);
+}
+
+class SessionRenderer {
+  constructor(candles, chartRef) { this._candles=candles; this._chart=chartRef; }
+  drawBackground(target) { this._paint(target); }
+  draw() {}
+  _paint(target) {
+    if (!this._chart||this._candles.length===0) return;
+    const ts = this._chart.timeScale();
+    target.useBitmapCoordinateSpace(scope => {
+      const ctx=scope.context, W=scope.bitmapSize.width, H=scope.bitmapSize.height, pr=scope.horizontalPixelRatio;
+      let barW = 6*pr;
+      if (this._candles.length>=2) {
+        const x0=ts.timeToCoordinate(this._candles[0].time), x1=ts.timeToCoordinate(this._candles[1].time);
+        if (x0!==null&&x1!==null) barW=Math.abs((x1-x0)*pr);
+      }
+      if (barW<1) barW=1;
+      let spanL=null, spanR=null, spanColor=null;
+      const flush=()=>{ if(spanL===null)return; ctx.fillStyle=spanColor; ctx.fillRect(spanL,0,spanR-spanL,H); spanL=spanR=spanColor=null; };
+      for (const c of this._candles) {
+        const d=new Date(c.time*1000), secs=d.getUTCHours()*3600+d.getUTCMinutes()*60;
+        const isPre=secs>=4*3600&&secs<9*3600+30*60, isPost=secs>=16*3600&&secs<=20*3600;
+        const color=isPre?'rgba(255,152,0,0.15)':isPost?'rgba(41,98,255,0.15)':null;
+        const xCss=ts.timeToCoordinate(c.time);
+        if (xCss===null){flush();continue;}
+        const x=xCss*pr;
+        if (x<-barW||x>W+barW){flush();continue;}
+        if (color){if(spanColor===color){spanR=x+barW/2;}else{flush();spanL=x-barW/2;spanR=x+barW/2;spanColor=color;}}else{flush();}
+      }
+      flush();
+    });
+  }
+}
+class SessionPaneView { constructor(c,r){this._r=new SessionRenderer(c,r);} zOrder(){return'bottom';} renderer(){return this._r;} }
+class SessionShadingPrimitive { constructor(c,r){this._v=new SessionPaneView(c,r);} attached(){} detached(){} updateAllViews(){} paneViews(){return[this._v];} }
+
+class MarkerRenderer {
+  constructor(markers, chartRef, seriesRef, getHL) { this._m=markers; this._c=chartRef; this._s=seriesRef; this._hl=getHL; }
+  draw(target) { this._paint(target); }
+  drawBackground() {}
+  _paint(target) {
+    if (!this._c||!this._s||this._m.length===0) return;
+    const ts=this._c.timeScale(), hlId=this._hl?this._hl():null;
+    target.useBitmapCoordinateSpace(scope=>{
+      const ctx=scope.context, pr=scope.horizontalPixelRatio, pv=scope.verticalPixelRatio;
+      const W=scope.bitmapSize.width, H=scope.bitmapSize.height;
+      const size=9*pr, height=11*pv;
+      for (const m of this._m) {
+        const xCss=ts.timeToCoordinate(m.time), yCss=this._s.priceToCoordinate(m.price);
+        if (xCss===null||yCss===null) continue;
+        const x=xCss*pr, y=yCss*pv;
+        if (x<-size*2||x>W+size*2||y<-height*2||y>H+height*2) continue;
+        if (m.kind==='stop') {
+          ctx.beginPath(); ctx.moveTo(x-size,y); ctx.lineTo(x+size,y);
+          ctx.lineWidth=3*pr; ctx.strokeStyle=COLOR_RED; ctx.stroke(); continue;
+        }
+        const isHL=hlId!==null&&m.id===hlId;
+        const s=isHL?size*1.35:size, h=isHL?height*1.35:height;
+        ctx.beginPath();
+        if (m.shape==='up'){ctx.moveTo(x,y-h/2);ctx.lineTo(x-s,y+h/2);ctx.lineTo(x+s,y+h/2);}
+        else               {ctx.moveTo(x,y+h/2);ctx.lineTo(x-s,y-h/2);ctx.lineTo(x+s,y-h/2);}
+        ctx.closePath(); ctx.fillStyle=m.color; ctx.fill();
+        ctx.lineWidth=isHL?2.6*pr:1.6*pr; ctx.strokeStyle=COLOR_WHITE; ctx.stroke();
+      }
+    });
+  }
+}
+class MarkerPaneView { constructor(m,c,s,hl){this._r=new MarkerRenderer(m,c,s,hl);} zOrder(){return'top';} renderer(){return this._r;} }
+class MarkerPrimitive {
+  constructor(chartRef, seriesRef, getHL) {
+    this.markers=[]; this._c=chartRef; this._s=seriesRef; this._ru=null;
+    this._v=new MarkerPaneView(this.markers,chartRef,seriesRef,getHL);
+  }
+  attached(p){this._ru=p&&p.requestUpdate?p.requestUpdate:null;}
+  detached(){this._ru=null;}
+  updateAllViews(){} paneViews(){return[this._v];}
+  addMarker(id,time,price,color,shape,kind,entryId=null){
+    this.markers.push({id,time,price,color,shape,kind,entryId});
+    if(this._ru)this._ru();
+  }
+  removeMarkerById(id){
+    const i=this.markers.findIndex(m=>m.id===id);
+    if(i!==-1)this.markers.splice(i,1);
+    if(this._ru)this._ru();
+  }
+  removeStopForEntry(entryId){
+    const i=this.markers.findIndex(m=>m.kind==='stop'&&m.entryId===entryId);
+    if(i!==-1)this.markers.splice(i,1);
+    if(this._ru)this._ru();
+  }
+  clear(){this.markers.length=0; if(this._ru)this._ru();}
+  refresh(){if(this._ru)this._ru();}
+  hitTest(xCss,yCss,r=12,kindFilter=null){
+    if(!this._c||!this._s)return null;
+    const ts=this._c.timeScale(); let best=null, bestDist=Infinity;
+    for(const m of this.markers){
+      if(kindFilter&&m.kind!==kindFilter)continue;
+      const mx=ts.timeToCoordinate(m.time), my=this._s.priceToCoordinate(m.price);
+      if(mx===null||my===null)continue;
+      const dist=Math.hypot(mx-xCss,my-yCss);
+      if(dist<=r&&dist<bestDist){bestDist=dist;best=m;}
+    }
+    return best;
+  }
+}
+
+function markerStyleFor(kind) {
+  if(kind==='entry') return direction==='long'?{color:COLOR_BLUE,shape:'up'}:{color:COLOR_RED,shape:'down'};
+  return direction==='long'?{color:COLOR_RED,shape:'down'}:{color:COLOR_BLUE,shape:'up'};
+}
+function setDirection(dir){
+  direction=dir;
+  document.getElementById('btnLong').classList.toggle('active-long',dir==='long');
+  document.getElementById('btnShort').classList.toggle('active-short',dir==='short');
+  calculate();
+}
+function setAllocMode(mode){
+  allocMode=mode;
+  document.getElementById('allocFifo').classList.toggle('active',mode==='fifo');
+  document.getElementById('allocPro').classList.toggle('active',mode==='prorata');
+  calculate();
+}
+function setExitMode(mode){
+  exitMode=mode;
+  document.getElementById('exitShares').classList.toggle('active-teal',mode==='shares');
+  document.getElementById('exitPct').classList.toggle('active-teal',mode==='percent');
+  document.getElementById('exitQtyHeader').textContent=mode==='shares'?'Qty':'Percent (%)';
+  calculate();
+}
+function setTapMode(mode){
+  tapMode=mode;
+  stopStep=(mode==='stop')?'awaiting-entry':null;
+  stopSelectedEntryId=null;
+  ['tapNone','tapEntry','tapStop','tapExit','tapDelete'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.classList.remove('active-off','active-entry','active-exit','active-stop','active-delete');
+  });
+  updateModeLabel();
+  if(mode==='none')  document.getElementById('tapNone').classList.add('active-off');
+  if(mode==='entry') document.getElementById('tapEntry').classList.add('active-entry');
+  if(mode==='stop')  document.getElementById('tapStop').classList.add('active-stop');
+  if(mode==='exit')  document.getElementById('tapExit').classList.add('active-exit');
+  if(mode==='delete')document.getElementById('tapDelete').classList.add('active-delete');
+  if(chart)chart.applyOptions({handleScroll:mode==='none',handleScale:mode==='none'});
+  if(markerPrimitive)markerPrimitive.refresh();
+}
+function updateModeLabel(){
+  const labels={none:'',entry:'&#x2192; tap chart to add entry price',exit:'&#x2192; tap chart to add exit price',delete:'&#x2192; tap a triangle on the chart to delete it'};
+  let text=labels[tapMode]||'';
+  if(tapMode==='stop'){
+    text=stopStep==='awaiting-entry'
+      ?'&#x2192; click the entry triangle you want to set a stop for'
+      :'&#x2192; now click the chart to set the stop price for that entry';
+  }
+  document.getElementById('tapModeLabel').innerHTML=text;
+}
+function setTF(tf){
+  currentTF=tf;
+  ['1m','5m','15m','1h','1d'].forEach(t=>{const el=document.getElementById('tf'+t);if(el)el.classList.toggle('active',t===tf);});
+}
+function onDateChange(){
+  const v=document.getElementById('dateEnd').value;
+  document.getElementById('dateEnd').classList.toggle('date-active',!!v);
+}
+function clearDate(){document.getElementById('dateEnd').value='';document.getElementById('dateEnd').classList.remove('date-active');}
+function clearAll(){
+  document.getElementById('entriesContainer').innerHTML='';
+  document.getElementById('exitsContainer').innerHTML='';
+  if(markerPrimitive)markerPrimitive.clear();
+  showStopError(null);
+  updateEmptyHints();calculate();
+  setStatus('All entries, exits, and chart markers cleared.');
+}
+function updateEmptyHints(){
+  const eH=document.getElementById('entriesEmptyHint'), xH=document.getElementById('exitsEmptyHint');
+  if(eH)eH.style.display=document.querySelectorAll('#entriesContainer .row-entry').length?'none':'block';
+  if(xH)xH.style.display=document.querySelectorAll('#exitsContainer .row-exit').length?'none':'block';
+}
+function setStatus(msg){document.getElementById('statusBar').innerHTML=msg;}
+
+function initChart(){
+  const container=document.getElementById('chartContainer');
+  if(chart){chart.remove();chart=null;candleSeries=null;markerPrimitive=null;}
+  chart=LightweightCharts.createChart(container,{
+    width:container.clientWidth, height:container.clientHeight,
+    layout:{background:{color:'#0a0c10'},textColor:'#9aa0ac'},
+    grid:{vertLines:{color:'#1a1d26'},horzLines:{color:'#1a1d26'}},
+    crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
+    rightPriceScale:{borderColor:'#262b3a'},
+    timeScale:{borderColor:'#262b3a',timeVisible:true,secondsVisible:false},
+  });
+  candleSeries=chart.addCandlestickSeries({
+    upColor:'#4ade80',downColor:'#ff6b81',
+    borderUpColor:'#4ade80',borderDownColor:'#ff6b81',
+    wickUpColor:'#4ade80',wickDownColor:'#ff6b81',
+  });
+  chart.subscribeClick(param=>{
+    if(tapMode==='none'||!param.point)return;
+    if(tapMode==='delete'){
+      if(!markerPrimitive)return;
+      const hit=markerPrimitive.hitTest(param.point.x,param.point.y);
+      if(hit)deleteMarkerAndRow(hit.id);
+      return;
+    }
+    if(tapMode==='stop'){
+      if(stopStep==='awaiting-entry'){
+        const hit=markerPrimitive?markerPrimitive.hitTest(param.point.x,param.point.y,12,'entry'):null;
+        if(!hit){setStatus('No entry triangle there &#x2014; click directly on an existing entry marker.');return;}
+        stopSelectedEntryId=hit.id; stopStep='awaiting-price';
+        updateModeLabel(); if(markerPrimitive)markerPrimitive.refresh();
+        setStatus('Entry selected &#x2014; now click the chart to set its stop price.');
+        return;
+      }
+      if(stopStep==='awaiting-price'){
+        if(param.time===undefined)return;
+        const price=candleSeries.coordinateToPrice(param.point.y);
+        if(price===null)return;
+        applyStopToEntry(stopSelectedEntryId,parseFloat(price.toFixed(4)));
+        setTapMode('none'); return;
+      }
+      return;
+    }
+    if(param.time===undefined)return;
+    const price=candleSeries.coordinateToPrice(param.point.y);
+    if(price===null)return;
+    const p=parseFloat(price.toFixed(4)), t=param.time;
+    if(tapMode==='entry'){handleTapEntry(p,t);setTapMode('none');}
+    else if(tapMode==='exit'){handleTapExit(p,t);setTapMode('none');}
+  });
+  window.addEventListener('resize',()=>{if(chart)chart.applyOptions({width:container.clientWidth,height:container.clientHeight});});
+}
+
+function applyStopToEntry(entryMarkerId, stopPrice){
+  const row=document.querySelector(`[data-marker-id="${entryMarkerId}"]`);
+  if(!row||!row.classList.contains('row-entry')){setStatus('Could not find the linked entry row.');return;}
+  const inputs=row.querySelectorAll('input');
+  const entryPrice=parseFloat(inputs[2].value);
+  const errMsg=validateStopPrice(entryPrice,stopPrice,direction);
+  if(errMsg){
+    showStopError(errMsg);
+    inputs[4].classList.add('input-error');
+    setTimeout(()=>inputs[4].classList.remove('input-error'),2000);
+    setStatus('Stop rejected \u2014 invalid for this direction.');
+    setTapMode('none'); return;
+  }
+  showStopError(null);
+  inputs[4].value=stopPrice; inputs[4].classList.add('tapped');
+  setTimeout(()=>inputs[4].classList.remove('tapped'),1500);
+  if(markerPrimitive){
+    markerPrimitive.removeStopForEntry(entryMarkerId);
+    const em=markerPrimitive.markers.find(m=>m.id===entryMarkerId);
+    if(em)markerPrimitive.addMarker(markerIdCounter++,em.time,stopPrice,COLOR_RED,'dash','stop',entryMarkerId);
+  }
+  calculate();
+  setStatus('Stop set @ '+stopPrice+' for the selected entry.');
+}
+function deleteMarkerAndRow(markerId){
+  if(markerPrimitive){markerPrimitive.removeStopForEntry(markerId);markerPrimitive.removeMarkerById(markerId);}
+  const row=document.querySelector(`[data-marker-id="${markerId}"]`);
+  if(row)row.remove();
+  updateEmptyHints();calculate();
+  setStatus('Marker and its linked row removed.');
+}
+
+function handleTapEntry(price,time){
+  const id=markerIdCounter++;
+  addEntryRow('',price,'','',id,time);
+  if(markerPrimitive){const st=markerStyleFor('entry');markerPrimitive.addMarker(id,time,price,st.color,st.shape,'entry');}
+  setStatus('Entry added @ '+price+' &#x2014; enter tag, qty, and stop in the left panel');
+}
+function handleTapExit(price,time){
+  const id=markerIdCounter++;
+  addExitRow(price,'',id,time);
+  const rows=document.querySelectorAll('#exitsContainer .row-exit');
+  if(rows.length>0)rows[rows.length-1].querySelectorAll('input')[2].focus();
+  if(markerPrimitive){const st=markerStyleFor('exit');markerPrimitive.addMarker(id,time,price,st.color,st.shape,'exit');}
+  setStatus('Exit added @ '+price+' &#x2014; enter qty or % in the left panel');
+}
+
+function onRowTimeChange(input){
+  const row=input.closest('div[class^="row-"]');
+  const markerId=row.getAttribute('data-marker-id');
+  const newEpoch=localInputStrToEpoch(input.value);
+  if(markerId!==null&&markerPrimitive&&newEpoch!==null){
+    const id=parseInt(markerId,10);
+    const m=markerPrimitive.markers.find(mm=>mm.id===id);
+    if(m){m.time=newEpoch;const sm=markerPrimitive.markers.find(mm=>mm.kind==='stop'&&mm.entryId===id);if(sm)sm.time=newEpoch;markerPrimitive.refresh();}
+  }
+  calculate();
+}
+function onRowPriceChange(input){
+  const row=input.closest('div[class^="row-"]');
+  const markerId=row.getAttribute('data-marker-id');
+  const newPrice=parseFloat(input.value);
+  if(markerId!==null&&markerPrimitive&&!isNaN(newPrice)){
+    const id=parseInt(markerId,10);
+    const m=markerPrimitive.markers.find(mm=>mm.id===id);
+    if(m){m.price=newPrice;markerPrimitive.refresh();}
+  }
+  calculate();
+}
+function onStopManualChange(input){
+  const row=input.closest('div[class^="row-"]');
+  const inputs=row.querySelectorAll('input');
+  const entryPrice=parseFloat(inputs[2].value);
+  const stopPrice=parseFloat(input.value);
+  const markerId=row.getAttribute('data-marker-id');
+  if(!isNaN(stopPrice)){
+    const errMsg=validateStopPrice(entryPrice,stopPrice,direction);
+    if(errMsg){showStopError(errMsg);input.classList.add('input-error');calculate();return;}
+    showStopError(null);input.classList.remove('input-error');
+    if(markerId!==null&&markerPrimitive){
+      const id=parseInt(markerId,10);
+      markerPrimitive.removeStopForEntry(id);
+      const em=markerPrimitive.markers.find(m=>m.id===id);
+      if(em)markerPrimitive.addMarker(markerIdCounter++,em.time,stopPrice,COLOR_RED,'dash','stop',id);
+    }
+  } else {
+    input.classList.remove('input-error');showStopError(null);
+    if(markerId!==null&&markerPrimitive)markerPrimitive.removeStopForEntry(parseInt(markerId,10));
+  }
+  calculate();
+}
+
+function addEntryRow(tag='',price='',qty='',stop='',markerId=null,timeEpoch=null){
+  const container=document.getElementById('entriesContainer');
+  const row=document.createElement('div'); row.className='row-entry';
+  if(markerId!==null)row.setAttribute('data-marker-id',markerId);
+  const timeStr=timeEpoch!==null?epochToLocalInputStr(timeEpoch):'';
+  row.innerHTML=`
+    <input type="text" placeholder="ORB" value="${tag}" oninput="calculate()">
+    <input type="datetime-local" step="60" value="${timeStr}" onchange="onRowTimeChange(this)">
+    <input type="number" step="any" placeholder="Price" value="${price}" oninput="onRowPriceChange(this)">
+    <input type="number" step="any" placeholder="Qty" value="${qty}" oninput="calculate()">
+    <input type="number" step="any" placeholder="Stop" value="${stop}" oninput="onStopManualChange(this)">
+    <button class="remove-btn" onclick="removeRow(this)">&#xd7;</button>
+  `;
+  container.appendChild(row); updateEmptyHints(); calculate();
+}
+function addExitRow(price='',qty='',markerId=null,timeEpoch=null){
+  const container=document.getElementById('exitsContainer');
+  const row=document.createElement('div'); row.className='row-exit';
+  if(markerId!==null)row.setAttribute('data-marker-id',markerId);
+  const timeStr=timeEpoch!==null?epochToLocalInputStr(timeEpoch):'';
+  row.innerHTML=`
+    <input type="number" step="any" placeholder="Exit Price" value="${price}" oninput="onRowPriceChange(this)">
+    <input type="datetime-local" step="60" value="${timeStr}" onchange="onRowTimeChange(this)">
+    <input type="number" step="any" placeholder="${exitMode==='shares'?'Qty':'%'}" value="${qty}" oninput="calculate()">
+    <button class="remove-btn" onclick="removeRow(this)">&#xd7;</button>
+  `;
+  container.appendChild(row); updateEmptyHints(); calculate();
+}
+function removeRow(btn){
+  const row=btn.closest('div[class^="row-"]');
+  const markerId=row.getAttribute('data-marker-id');
+  if(markerId!==null&&markerPrimitive){const id=parseInt(markerId,10);markerPrimitive.removeStopForEntry(id);markerPrimitive.removeMarkerById(id);}
+  row.remove(); updateEmptyHints(); calculate();
+}
+
+function getEntries(){
+  return [...document.querySelectorAll('#entriesContainer .row-entry')].map(row=>{
+    const inp=row.querySelectorAll('input');
+    const tag=inp[0].value.trim()||'Untagged';
+    const timeEpoch=localInputStrToEpoch(inp[1].value);
+    const price=parseFloat(inp[2].value), qty=parseFloat(inp[3].value), stop=parseFloat(inp[4].value);
+    if(!isNaN(price)&&!isNaN(qty)&&qty>0)
+      return{tag,price,qty,stop:isNaN(stop)?null:stop,time:timeEpoch,remaining:qty,allocatedReward:0,allocatedExitQty:0};
+    return null;
+  }).filter(Boolean);
+}
+function getExits(totalEntryShares){
+  return [...document.querySelectorAll('#exitsContainer .row-exit')].map(row=>{
+    const inp=row.querySelectorAll('input');
+    const price=parseFloat(inp[0].value);
+    const timeEpoch=localInputStrToEpoch(inp[1].value);
+    let qty=parseFloat(inp[2].value);
+    if(!isNaN(price)&&!isNaN(qty)&&qty>0){
+      if(exitMode==='percent'&&totalEntryShares)qty=(qty/100)*totalEntryShares;
+      return{price,qty,time:timeEpoch};
+    }
+    return null;
+  }).filter(Boolean);
+}
+
+function fmt(n,d=2){if(!isFinite(n))return '\u2013';return n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});}
+
+function calculate(){
+  const entries=getEntries();
+  const totalEntryShares=entries.reduce((s,e)=>s+e.qty,0);
+  const exits=getExits(totalEntryShares);
+  const totalExitShares=exits.reduce((s,e)=>s+e.qty,0);
+  const noteEl=document.getElementById('allocationNote');
+
+  if(!entries.length){
+    ['avgEntry','totalShares','totalRisk','totalReward','rMultiple','holdTime'].forEach(id=>{
+      document.getElementById(id).textContent='\u2013';
+      document.getElementById(id).className='value neutral';
+    });
+    document.getElementById('setupTableBody').innerHTML='';
+    noteEl.className='alloc-note';noteEl.textContent='Enter entries and exits to see allocation.';return;
+  }
+
+  if(allocMode==='fifo'){
+    exits.forEach(exit=>{
+      let rem=exit.qty;
+      for(const t of entries){
+        if(rem<=0||t.remaining<=0)continue;
+        const fill=Math.min(t.remaining,rem), pl=direction==='long'?(exit.price-t.price):(t.price-exit.price);
+        t.allocatedReward+=pl*fill; t.allocatedExitQty+=fill; t.remaining-=fill; rem-=fill;
+        if(exit.time!==null&&t.time!==null){t.lastFillTime=exit.time;}
+      }
+    });
+  } else {
+    exits.forEach(exit=>{
+      entries.forEach(t=>{
+        const share=totalEntryShares>0?t.qty/totalEntryShares:0, fill=exit.qty*share;
+        const pl=direction==='long'?(exit.price-t.price):(t.price-exit.price);
+        t.allocatedReward+=pl*fill; t.allocatedExitQty+=fill;
+        if(exit.time!==null&&t.time!==null){if(!t.lastFillTime||exit.time>t.lastFillTime)t.lastFillTime=exit.time;}
+      });
+    });
+  }
+
+  entries.forEach(e=>{
+    if(e.stop!==null){const r=direction==='long'?(e.price-e.stop):(e.stop-e.price);e.risk=r*e.qty;}else e.risk=null;
+  });
+
+  const validRisk=entries.filter(e=>e.risk!==null);
+  const totalRisk=validRisk.length?validRisk.reduce((s,e)=>s+e.risk,0):null;
+  const totalReward=entries.reduce((s,e)=>s+e.allocatedReward,0);
+  const avgEntry=entries.reduce((s,e)=>s+e.price*e.qty,0)/totalEntryShares;
+  const rMultiple=(totalRisk&&totalRisk!==0)?totalReward/totalRisk:null;
+
+  const entryTimes=entries.filter(e=>e.time!==null).map(e=>e.time);
+  const exitTimes=exits.filter(e=>e.time!==null).map(e=>e.time);
+  let blendedHold=null;
+  if(entryTimes.length&&exitTimes.length){blendedHold=Math.max(...exitTimes)-Math.min(...entryTimes);}
+
+  const MASK='\u2022\u2022\u2022\u2022\u2022\u2022';
+  document.getElementById('avgEntry').textContent=fmt(avgEntry,4);
+  document.getElementById('totalShares').textContent=privacyBlended?MASK:fmt(totalEntryShares,0);
+  const riskEl=document.getElementById('totalRisk');
+  riskEl.textContent=privacyBlended?MASK:(totalRisk!==null?'$'+fmt(Math.abs(totalRisk)):'Missing stop(s)');
+  riskEl.className='value '+(totalRisk!==null?'negative':'neutral');
+  const rewEl=document.getElementById('totalReward');
+  rewEl.textContent=privacyBlended?MASK:((totalReward>=0?'':'-')+'$'+fmt(Math.abs(totalReward)));
+  rewEl.className='value '+(totalReward>=0?'positive':'negative');
+  const rEl=document.getElementById('rMultiple');
+  rEl.textContent=rMultiple!==null?fmt(rMultiple)+'R':'\u2013';
+  rEl.className='value '+(rMultiple!==null?(rMultiple>=0?'positive':'negative'):'neutral');
+  document.getElementById('holdTime').textContent=blendedHold!==null?formatDuration(blendedHold):'\u2013';
+
+  const pct=totalEntryShares>0?totalExitShares/totalEntryShares*100:0;
+  if(totalExitShares>totalEntryShares+0.001){noteEl.className='alloc-note warn';noteEl.textContent=`Exit qty (${fmt(totalExitShares,0)}, ${fmt(pct,1)}%) exceeds position size.`;}
+  else if(totalExitShares<totalEntryShares-0.001){noteEl.className='alloc-note';noteEl.textContent=`${fmt(totalExitShares,0)} of ${fmt(totalEntryShares,0)} shares closed (${fmt(pct,1)}% \u2014 still open).`;}
+  else{noteEl.className='alloc-note ok';noteEl.textContent=`Full position closed (${fmt(totalEntryShares,0)} shares) \u2014 ${allocMode==='fifo'?'FIFO':'Pro-Rata'}.`;}
+
+  const map={};
+  entries.forEach(e=>{
+    if(!map[e.tag])map[e.tag]={size:0,risk:0,reward:0,hasRisk:true,minTime:null,maxTime:null};
+    map[e.tag].size+=e.qty; map[e.tag].reward+=e.allocatedReward;
+    if(e.risk!==null)map[e.tag].risk+=e.risk; else map[e.tag].hasRisk=false;
+    if(e.time!==null){if(map[e.tag].minTime===null||e.time<map[e.tag].minTime)map[e.tag].minTime=e.time;}
+    if(e.lastFillTime){if(map[e.tag].maxTime===null||e.lastFillTime>map[e.tag].maxTime)map[e.tag].maxTime=e.lastFillTime;}
+  });
+
+  const tbody=document.getElementById('setupTableBody'); tbody.innerHTML='';
+  Object.keys(map).forEach(tag=>{
+    const s=map[tag], r=(s.hasRisk&&s.risk!==0)?s.reward/s.risk:null;
+    const rc=r===null?'neutral':(r>=0?'positive':'negative'), rewc=s.reward>=0?'positive':'negative';
+    const hold=(s.minTime!==null&&s.maxTime!==null)?formatDuration(s.maxTime-s.minTime):'\u2013';
+    const sizeTxt=privacySetup?MASK:fmt(s.size,0);
+    const riskTxt=privacySetup?MASK:(s.hasRisk?'$'+fmt(Math.abs(s.risk)):'\u2013');
+    const rewTxt=(privacySetup?MASK:(s.reward>=0?'':'-')+'$'+fmt(Math.abs(s.reward)));
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="tag-pill">${tag}</span></td><td class="${rc}"><strong>${r!==null?fmt(r)+'R':'\u2013'}</strong></td><td>${sizeTxt}</td><td>${riskTxt}</td><td class="${rewc}">${rewTxt}</td><td>${hold}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildApiUrl(ticker){
+  const interval=tfMap[currentTF], endVal=document.getElementById('dateEnd').value;
+  const base=`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&includePrePost=true`;
+  if(endVal){const p2=Math.floor(new Date(endVal+'T23:59:59Z').getTime()/1000);return`${base}&period1=${p2-tfWindow[currentTF]*24*3600}&period2=${p2}`;}
+  const rangeMap={'1m':'7d','5m':'60d','15m':'60d','1h':'730d','1d':'5y'};
+  return`${base}&range=${rangeMap[currentTF]}`;
+}
+async function tryFetch(url,timeout=9000){
+  try{const res=await fetch(url,{signal:AbortSignal.timeout(timeout)});if(!res.ok)return null;const data=await res.json();return data?.chart?.result?.[0]?data:null;}catch(e){return null;}
+}
+function autoSwitchTFIfNeeded(endVal){
+  if(!endVal)return null;
+  const daysAgo=(Date.now()-new Date(endVal+'T23:59:59Z').getTime())/(1000*86400);
+  if(daysAgo<=tfWindow[currentTF])return null;
+  const original=currentTF;
+  for(const tf of tfOrder){if(tfWindow[tf]>=daysAgo){setTF(tf);return{from:original,to:tf};}}
+  setTF('1d');return{from:original,to:'1d'};
+}
+async function loadChart(){
+  const ticker=document.getElementById('tickerInput').value.trim().toUpperCase();
+  if(!ticker)return;
+  const statusEl=document.getElementById('chartStatus'), endVal=document.getElementById('dateEnd').value;
+  const switched=autoSwitchTFIfNeeded(endVal);
+  let switchNote=switched?`&#x26A0;&#xFE0F; Auto-switched ${switched.from} &#x2192; ${switched.to}. `+'':\'\'';
+  statusEl.textContent='Loading\u2026'; document.getElementById('chartHint').style.display='none';
+  const apiUrl=buildApiUrl(ticker);
+  const proxies=[
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(apiUrl)}`,
+    `https://proxy.cors.sh/${apiUrl}`,
+    `https://thingproxy.freeboard.io/fetch/${apiUrl}`,
+  ];
+  let json=null;
+  for(const url of proxies){statusEl.textContent='Trying\u2026';json=await tryFetch(url);if(json)break;}
+  if(!json){statusEl.textContent='Failed \u2014 check ticker';setStatus(switchNote+'Could not load "'+ticker+'".');return;}
+  try{
+    const result=json.chart.result[0], ts=result.timestamp, q=result.indicators.quote[0];
+    const candles=ts.map((t,i)=>({
+      time:utcToEtWallClock(t),
+      open:q.open[i]?+q.open[i].toFixed(4):null,
+      high:q.high[i]?+q.high[i].toFixed(4):null,
+      low:q.low[i]?+q.low[i].toFixed(4):null,
+      close:q.close[i]?+q.close[i].toFixed(4):null,
+    })).filter(c=>c.open&&c.high&&c.low&&c.close);
+    sessionCandles=candles;
+    initChart();
+    applyTheme(document.body.classList.contains('light-theme')?'light':'dark');
+    candleSeries.attachPrimitive(new SessionShadingPrimitive(candles,chart));
+    markerPrimitive=new MarkerPrimitive(chart,candleSeries,()=>(stopStep==='awaiting-price'?stopSelectedEntryId:null));
+    candleSeries.attachPrimitive(markerPrimitive);
+    candleSeries.setData(candles); chart.timeScale().fitContent();
+    statusEl.textContent=`${ticker} \u00b7 ${candles.length} bars \u00b7 ${currentTF} \u00b7 ET`;
+    setStatus(switchNote+`${ticker} loaded \u2014 axis shows U.S. ET.`);
+  }catch(e){console.error(e);statusEl.textContent='Parse error';setStatus(switchNote+'Chart data parse failed.');}
+}
+
+window.addEventListener('load',()=>{
+  initChart();
+  setTapMode('none');
+  updateEmptyHints();
+  calculate();
+  let savedTheme='dark';
+  try{savedTheme=localStorage.getItem('rCalcTheme')||'dark';}catch(e){}
+  applyTheme(savedTheme);
+  document.getElementById('tickerInput').addEventListener('keydown',e=>{if(e.key==='Enter')loadChart();});
+});
+</script>
+</body>
+</html>
