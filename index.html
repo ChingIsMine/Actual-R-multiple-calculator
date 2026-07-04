@@ -17,7 +17,6 @@ body {
   grid-template-columns: 420px 1fr;
   min-height: 100vh;
 }
-/* LEFT PANEL */
 .left-panel {
   background: #0f1117;
   border-right: 1px solid #262b3a;
@@ -113,18 +112,13 @@ table.setup-table th { color: #7d8290; font-size: 0.65rem; text-transform: upper
 .method-item { font-size: 0.72rem; color: #9aa0ac; line-height: 1.4; margin-bottom: 6px; }
 .method-item:last-child { margin-bottom: 0; }
 .method-item strong { color: #a78bfa; }
-/* RIGHT PANEL */
-.right-panel {
-  display: flex; flex-direction: column; background: #0a0c10;
-}
+.right-panel { display: flex; flex-direction: column; background: #0a0c10; }
 .chart-toolbar {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 14px; background: #0f1117; border-bottom: 1px solid #262b3a;
   flex-wrap: wrap;
 }
-.chart-toolbar input[type=text] {
-  width: 90px; padding: 6px 8px; font-size: 0.85rem; text-transform: uppercase;
-}
+.chart-toolbar input[type=text] { width: 90px; padding: 6px 8px; font-size: 0.85rem; text-transform: uppercase; }
 .tf-btn {
   padding: 5px 9px; border-radius: 6px; border: 1px solid #2c3140;
   background: #0f1117; color: #9aa0ac; cursor: pointer; font-size: 0.75rem; font-weight: 600;
@@ -142,8 +136,7 @@ table.setup-table th { color: #7d8290; font-size: 0.65rem; text-transform: upper
 .tap-mode-bar span { font-size: 0.72rem; color: #7d8290; white-space: nowrap; }
 .tap-btn {
   padding: 5px 10px; border-radius: 6px; border: 1px solid #2c3140;
-  background: #0f1117; color: #9aa0ac; cursor: pointer; font-size: 0.72rem;
-  white-space: nowrap;
+  background: #0f1117; color: #9aa0ac; cursor: pointer; font-size: 0.72rem; white-space: nowrap;
 }
 .tap-btn.active-entry { background: #10231d; color: #4ade80; border-color: #235c43; }
 .tap-btn.active-exit { background: #1c1730; color: #a78bfa; border-color: #302650; }
@@ -152,8 +145,7 @@ table.setup-table th { color: #7d8290; font-size: 0.65rem; text-transform: upper
 .chart-hint {
   position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
   background: rgba(15,17,23,0.85); border: 1px solid #262b3a; border-radius: 8px;
-  padding: 7px 14px; font-size: 0.75rem; color: #9aa0ac; pointer-events: none;
-  white-space: nowrap;
+  padding: 7px 14px; font-size: 0.75rem; color: #9aa0ac; pointer-events: none; white-space: nowrap;
 }
 .status-bar {
   padding: 6px 14px; background: #0f1117; border-top: 1px solid #262b3a;
@@ -164,12 +156,9 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
 </head>
 <body>
 <div class="app-layout">
-
-  <!-- LEFT PANEL: Calculator -->
   <div class="left-panel">
     <h1>Actual R Calculator</h1>
     <div class="subtitle">Tap chart levels to set prices. Blended + per-setup R-multiple.</div>
-
     <div class="card">
       <h2>Direction</h2>
       <div class="toggle-row">
@@ -177,14 +166,12 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
         <button id="btnShort" onclick="setDirection('short')">SHORT</button>
       </div>
     </div>
-
     <div class="card">
       <h2 class="setup-color">Entries (by Setup)</h2>
       <div class="row-header-entry"><div>Tag</div><div>Entry</div><div>Qty</div><div>Stop</div><div></div></div>
       <div id="entriesContainer"></div>
       <button class="add-btn" onclick="addEntryRow()">+ Add Entry</button>
     </div>
-
     <div class="card">
       <h2 class="exit-color">Exits (Partials)</h2>
       <div class="toggle-row">
@@ -200,12 +187,11 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
         <button id="allocPro" onclick="setAllocMode('prorata')">Pro-Rata</button>
       </div>
       <div class="method-explainer">
-        <div class="method-item"><strong>FIFO (First In, First Out):</strong> exits close out your earliest entry first. Partial exits are credited entirely to the first tranche until it's fully closed, then move to the next. Mirrors how most brokers actually match closing fills against open lots.</div>
-        <div class="method-item"><strong>Pro-Rata (by size):</strong> every exit is split across all open setups proportionally to how much size each contributed. If ORB is 40% of your position and the add is 60%, every partial is divided 40/60 between them regardless of fill order.</div>
+        <div class="method-item"><strong>FIFO (First In, First Out):</strong> exits close out your earliest entry first. Partial exits are credited entirely to the first tranche until fully closed, then move to the next. Mirrors how most brokers match closing fills against open lots.</div>
+        <div class="method-item"><strong>Pro-Rata (by size):</strong> every exit is split across all open setups proportionally by size. If ORB is 40% of your position and the add is 60%, every partial is divided 40/60 between them regardless of fill order.</div>
       </div>
       <div class="alloc-note" id="allocationNote">Enter entries and exits to see allocation.</div>
     </div>
-
     <div class="card">
       <h2>Blended Trade Results</h2>
       <div class="results">
@@ -216,7 +202,6 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
         <div class="result-box full"><div class="label">BLENDED ACTUAL R-MULTIPLE</div><div class="value neutral" id="rMultiple">–</div></div>
       </div>
     </div>
-
     <div class="card">
       <h2 class="setup-color">Per-Setup Breakdown</h2>
       <table class="setup-table">
@@ -224,11 +209,9 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
         <tbody id="setupTableBody"></tbody>
       </table>
     </div>
-
     <footer>Actual R Calculator — Tom's trading workflow</footer>
   </div>
 
-  <!-- RIGHT PANEL: Chart -->
   <div class="right-panel">
     <div class="chart-toolbar">
       <input type="text" id="tickerInput" placeholder="NVDA" value="NVDA">
@@ -240,7 +223,6 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
       <button class="load-btn" onclick="loadChart()">Load Chart</button>
       <span id="chartStatus" style="font-size:0.75rem;color:#7d8290;margin-left:4px;"></span>
     </div>
-
     <div class="tap-mode-bar">
       <span>TAP TO SET:</span>
       <button class="tap-btn" id="tapNone" onclick="setTapMode('none')">Off</button>
@@ -249,29 +231,18 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
       <button class="tap-btn" id="tapExit" onclick="setTapMode('exit')">+ Exit</button>
       <span id="tapModeLabel" style="font-size:0.72rem;color:#4fd1c5;margin-left:4px;"></span>
     </div>
-
     <div id="chartContainer">
       <div class="chart-hint" id="chartHint">Enter a ticker and click "Load Chart" to begin</div>
     </div>
-
     <div class="status-bar" id="statusBar">Ready — load a chart, select a tap mode, then tap price levels to auto-fill entries/exits.</div>
   </div>
-
 </div>
 
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script>
-// ─── State ───────────────────────────────────────────────────────────────────
-let direction = 'long';
-let allocMode = 'fifo';
-let exitMode = 'shares';
-let tapMode = 'none';
-let currentTF = '1m';
-let chart = null;
-let candleSeries = null;
-let priceLines = [];
+let direction = 'long', allocMode = 'fifo', exitMode = 'shares', tapMode = 'none', currentTF = '1m';
+let chart = null, candleSeries = null, priceLines = [];
 
-// ─── Direction ───────────────────────────────────────────────────────────────
 function setDirection(dir) {
   direction = dir;
   document.getElementById('btnLong').classList.toggle('active-long', dir === 'long');
@@ -291,43 +262,27 @@ function setExitMode(mode) {
   document.getElementById('exitQtyHeader').textContent = mode === 'shares' ? 'Qty' : 'Percent (%)';
   calculate();
 }
-
-// ─── Tap Mode ─────────────────────────────────────────────────────────────────
 function setTapMode(mode) {
   tapMode = mode;
-  ['tapNone','tapEntry','tapStop','tapExit'].forEach(id => {
-    document.getElementById(id).className = 'tap-btn';
-  });
-  const labels = {
-    none: '',
-    entry: '→ tap chart to add entry price',
-    stop: '→ tap chart to set stop on latest entry row',
-    exit: '→ tap chart to add exit price'
-  };
+  ['tapNone','tapEntry','tapStop','tapExit'].forEach(id => document.getElementById(id).className = 'tap-btn');
+  const labels = { none:'', entry:'→ tap chart to add entry price', stop:'→ tap chart to set stop on latest entry', exit:'→ tap chart to add exit price' };
   document.getElementById('tapModeLabel').textContent = labels[mode];
-  if (mode === 'none') document.getElementById('tapNone').classList.add('active-entry');
-  if (mode === 'entry') document.getElementById('tapEntry').classList.add('active-entry');
-  if (mode === 'stop') document.getElementById('tapStop').classList.add('active-stop');
-  if (mode === 'exit') document.getElementById('tapExit').classList.add('active-exit');
-  if (chart) chart.applyOptions({ handleScroll: mode === 'none', handleScale: mode === 'none' });
+  if (mode==='none') document.getElementById('tapNone').classList.add('active-entry');
+  if (mode==='entry') document.getElementById('tapEntry').classList.add('active-entry');
+  if (mode==='stop') document.getElementById('tapStop').classList.add('active-stop');
+  if (mode==='exit') document.getElementById('tapExit').classList.add('active-exit');
+  if (chart) chart.applyOptions({ handleScroll: mode==='none', handleScale: mode==='none' });
 }
-
-// ─── TF ───────────────────────────────────────────────────────────────────────
 function setTF(tf) {
   currentTF = tf;
-  ['1m','5m','15m','1h','1d'].forEach(t => {
-    const el = document.getElementById('tf'+t);
-    if (el) el.classList.toggle('active', t === tf);
-  });
+  ['1m','5m','15m','1h','1d'].forEach(t => { const el = document.getElementById('tf'+t); if(el) el.classList.toggle('active', t===tf); });
 }
 
-// ─── Chart Init ──────────────────────────────────────────────────────────────
 function initChart() {
   const container = document.getElementById('chartContainer');
   if (chart) { chart.remove(); chart = null; candleSeries = null; priceLines = []; }
   chart = LightweightCharts.createChart(container, {
-    width: container.clientWidth,
-    height: container.clientHeight,
+    width: container.clientWidth, height: container.clientHeight,
     layout: { background: { color: '#0a0c10' }, textColor: '#9aa0ac' },
     grid: { vertLines: { color: '#1a1d26' }, horzLines: { color: '#1a1d26' } },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
@@ -339,77 +294,59 @@ function initChart() {
     borderUpColor: '#4ade80', borderDownColor: '#ff6b81',
     wickUpColor: '#4ade80', wickDownColor: '#ff6b81',
   });
-
   chart.subscribeClick(param => {
     if (tapMode === 'none' || !param.point) return;
     const price = candleSeries.coordinateToPrice(param.point.y);
     if (price === null) return;
     const p = parseFloat(price.toFixed(4));
-    if (tapMode === 'entry') handleTapEntry(p);
-    else if (tapMode === 'stop') handleTapStop(p);
-    else if (tapMode === 'exit') handleTapExit(p);
+    if (tapMode==='entry') handleTapEntry(p);
+    else if (tapMode==='stop') handleTapStop(p);
+    else if (tapMode==='exit') handleTapExit(p);
   });
-
-  window.addEventListener('resize', () => {
-    if (chart) chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
-  });
+  window.addEventListener('resize', () => { if(chart) chart.applyOptions({ width: container.clientWidth, height: container.clientHeight }); });
 }
 
 function addPriceLine(price, color, title) {
   if (!candleSeries) return null;
-  const line = candleSeries.createPriceLine({
-    price, color, lineWidth: 1,
-    lineStyle: LightweightCharts.LineStyle.Dashed,
-    axisLabelVisible: true, title
-  });
+  const line = candleSeries.createPriceLine({ price, color, lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title });
   priceLines.push(line);
   return line;
 }
 
-// ─── Tap Handlers ────────────────────────────────────────────────────────────
 function handleTapEntry(price) {
   addEntryRow('', price, '', '');
   addPriceLine(price, '#4ade80', 'E');
-  setStatus(`Entry added @ ${price} — enter tag, qty, and stop in the left panel`);
+  setStatus('Entry added @ ' + price + ' — enter tag, qty, and stop in the left panel');
 }
-
 function handleTapStop(price) {
   const rows = document.querySelectorAll('#entriesContainer .row-entry');
   let targeted = null;
-  for (let i = rows.length - 1; i >= 0; i--) {
-    const stopInput = rows[i].querySelectorAll('input')[3];
-    if (!stopInput.value) { targeted = stopInput; break; }
-  }
-  if (!targeted && rows.length > 0) {
-    targeted = rows[rows.length-1].querySelectorAll('input')[3];
-  }
-  if (targeted) {
-    targeted.value = price;
-    targeted.classList.add('tapped');
-    setTimeout(() => targeted.classList.remove('tapped'), 1500);
-    addPriceLine(price, '#ff6b81', 'SL');
-    calculate();
-  }
-  setStatus(`Stop set @ ${price}`);
+  for (let i = rows.length-1; i >= 0; i--) { const s = rows[i].querySelectorAll('input')[3]; if (!s.value) { targeted = s; break; } }
+  if (!targeted && rows.length > 0) targeted = rows[rows.length-1].querySelectorAll('input')[3];
+  if (targeted) { targeted.value = price; targeted.classList.add('tapped'); setTimeout(() => targeted.classList.remove('tapped'), 1500); addPriceLine(price, '#ff6b81', 'SL'); calculate(); }
+  setStatus('Stop set @ ' + price);
 }
-
 function handleTapExit(price) {
   addExitRow(price, '');
   const rows = document.querySelectorAll('#exitsContainer .row-exit');
-  if (rows.length > 0) {
-    rows[rows.length-1].querySelectorAll('input')[1].focus();
-  }
+  if (rows.length > 0) rows[rows.length-1].querySelectorAll('input')[1].focus();
   addPriceLine(price, '#a78bfa', 'TP');
-  setStatus(`Exit added @ ${price} — enter qty or % in the left panel`);
+  setStatus('Exit added @ ' + price + ' — enter qty or % in the left panel');
 }
+function setStatus(msg) { document.getElementById('statusBar').textContent = msg; }
 
-function setStatus(msg) {
-  document.getElementById('statusBar').textContent = msg;
-}
-
-// ─── Chart Data Loading ───────────────────────────────────────────────────────
-const tfMap  = { '1m':'1m', '5m':'5m', '15m':'15m', '1h':'60m', '1d':'1d' };
+// ─── Chart Loading with multi-proxy fallback ──────────────────────────────────
+const tfMap   = { '1m':'1m', '5m':'5m', '15m':'15m', '1h':'60m', '1d':'1d' };
 const tfRange = { '1m':'1d', '5m':'5d', '15m':'5d', '1h':'60d', '1d':'1y' };
+
+async function tryFetch(proxyUrl, timeout = 8000) {
+  try {
+    const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(timeout) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.chart?.result?.[0] ? data : null;
+  } catch(e) { return null; }
+}
 
 async function loadChart() {
   const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
@@ -417,36 +354,54 @@ async function loadChart() {
   const statusEl = document.getElementById('chartStatus');
   statusEl.textContent = 'Loading…';
   document.getElementById('chartHint').style.display = 'none';
-
   if (!chart) initChart();
 
   const interval = tfMap[currentTF];
   const range = tfRange[currentTF];
-  const proxy = 'https://corsproxy.io/?';
-  const url = `${proxy}https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&range=${range}`;
+  const apiUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&range=${range}&includePrePost=false`;
+
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(apiUrl)}`,
+    `https://proxy.cors.sh/${apiUrl}`,
+    `https://thingproxy.freeboard.io/fetch/${apiUrl}`,
+  ];
+
+  let json = null;
+  for (const url of proxies) {
+    statusEl.textContent = 'Trying…';
+    json = await tryFetch(url);
+    if (json) break;
+  }
+
+  if (!json) {
+    statusEl.textContent = 'Failed — check ticker';
+    setStatus('Could not load "' + ticker + '". Confirm the symbol is valid (e.g. NVDA, AAPL, SPY, QQQ). You can still type prices manually.');
+    return;
+  }
 
   try {
-    const res = await fetch(url);
-    const json = await res.json();
-    const result = json.chart?.result?.[0];
-    if (!result) { statusEl.textContent = 'Symbol not found'; return; }
+    const result = json.chart.result[0];
     const ts = result.timestamp;
     const q = result.indicators.quote[0];
     const candles = ts.map((t, i) => ({
       time: t,
-      open: q.open[i], high: q.high[i], low: q.low[i], close: q.close[i]
+      open:  q.open[i]  ? +q.open[i].toFixed(4)  : null,
+      high:  q.high[i]  ? +q.high[i].toFixed(4)  : null,
+      low:   q.low[i]   ? +q.low[i].toFixed(4)   : null,
+      close: q.close[i] ? +q.close[i].toFixed(4) : null,
     })).filter(c => c.open && c.high && c.low && c.close);
     candleSeries.setData(candles);
     chart.timeScale().fitContent();
-    statusEl.textContent = `${ticker} loaded (${candles.length} bars)`;
-    setStatus(`${ticker} chart loaded — select a tap mode above, then tap price levels on the chart`);
+    statusEl.textContent = ticker + ' · ' + candles.length + ' bars';
+    setStatus(ticker + ' loaded — select a tap mode above, then tap price levels on the chart');
   } catch(e) {
-    statusEl.textContent = 'Load failed';
-    setStatus('Chart load failed. You can still manually type prices in the left panel.');
+    statusEl.textContent = 'Parse error';
+    setStatus('Chart data parse failed. Try a different timeframe or symbol.');
   }
 }
 
-// ─── Row Management ──────────────────────────────────────────────────────────
+// ─── Row Management ───────────────────────────────────────────────────────────
 function addEntryRow(tag='', price='', qty='', stop='') {
   const container = document.getElementById('entriesContainer');
   const row = document.createElement('div');
@@ -461,46 +416,38 @@ function addEntryRow(tag='', price='', qty='', stop='') {
   container.appendChild(row);
   calculate();
 }
-
 function addExitRow(price='', qty='') {
   const container = document.getElementById('exitsContainer');
   const row = document.createElement('div');
   row.className = 'row-exit';
   row.innerHTML = `
     <input type="number" step="any" placeholder="Exit Price" value="${price}" oninput="calculate()">
-    <input type="number" step="any" placeholder="${exitMode === 'shares' ? 'Qty' : '%'}" value="${qty}" oninput="calculate()">
+    <input type="number" step="any" placeholder="${exitMode==='shares'?'Qty':'%'}" value="${qty}" oninput="calculate()">
     <button class="remove-btn" onclick="removeRow(this)">×</button>
   `;
   container.appendChild(row);
   calculate();
 }
-
-function removeRow(btn) {
-  btn.closest('div[class^="row-"]').remove();
-  calculate();
-}
+function removeRow(btn) { btn.closest('div[class^="row-"]').remove(); calculate(); }
 
 // ─── Data Getters ─────────────────────────────────────────────────────────────
 function getEntries() {
   return [...document.querySelectorAll('#entriesContainer .row-entry')].map(row => {
-    const inputs = row.querySelectorAll('input');
-    const tag = inputs[0].value.trim() || 'Untagged';
-    const price = parseFloat(inputs[1].value);
-    const qty = parseFloat(inputs[2].value);
-    const stop = parseFloat(inputs[3].value);
+    const inp = row.querySelectorAll('input');
+    const tag = inp[0].value.trim() || 'Untagged';
+    const price = parseFloat(inp[1].value), qty = parseFloat(inp[2].value), stop = parseFloat(inp[3].value);
     if (!isNaN(price) && !isNaN(qty) && qty > 0)
-      return { tag, price, qty, stop: isNaN(stop) ? null : stop, remaining: qty, allocatedReward: 0, allocatedExitQty: 0 };
+      return { tag, price, qty, stop: isNaN(stop)?null:stop, remaining: qty, allocatedReward: 0, allocatedExitQty: 0 };
     return null;
   }).filter(Boolean);
 }
-
 function getExits(totalEntryShares) {
   return [...document.querySelectorAll('#exitsContainer .row-exit')].map(row => {
-    const inputs = row.querySelectorAll('input');
-    const price = parseFloat(inputs[0].value);
-    let qty = parseFloat(inputs[1].value);
+    const inp = row.querySelectorAll('input');
+    const price = parseFloat(inp[0].value);
+    let qty = parseFloat(inp[1].value);
     if (!isNaN(price) && !isNaN(qty) && qty > 0) {
-      if (exitMode === 'percent' && totalEntryShares) qty = (qty / 100) * totalEntryShares;
+      if (exitMode==='percent' && totalEntryShares) qty = (qty/100)*totalEntryShares;
       return { price, qty };
     }
     return null;
@@ -508,10 +455,7 @@ function getExits(totalEntryShares) {
 }
 
 // ─── Calculate ────────────────────────────────────────────────────────────────
-function fmt(n, d=2) {
-  if (!isFinite(n)) return '–';
-  return n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
-}
+function fmt(n, d=2) { if (!isFinite(n)) return '–'; return n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
 
 function calculate() {
   const entries = getEntries();
@@ -521,111 +465,80 @@ function calculate() {
   const noteEl = document.getElementById('allocationNote');
 
   if (!entries.length) {
-    ['avgEntry','totalShares','totalRisk','totalReward','rMultiple'].forEach(id => {
-      document.getElementById(id).textContent = '–';
-      document.getElementById(id).className = 'value neutral';
-    });
+    ['avgEntry','totalShares','totalRisk','totalReward','rMultiple'].forEach(id => { document.getElementById(id).textContent='–'; document.getElementById(id).className='value neutral'; });
     document.getElementById('setupTableBody').innerHTML = '';
-    noteEl.className = 'alloc-note'; noteEl.textContent = 'Enter entries and exits to see allocation.';
+    noteEl.className='alloc-note'; noteEl.textContent='Enter entries and exits to see allocation.';
     return;
   }
 
-  // allocate
-  if (allocMode === 'fifo') {
+  if (allocMode==='fifo') {
     exits.forEach(exit => {
       let rem = exit.qty;
       for (const t of entries) {
-        if (rem <= 0 || t.remaining <= 0) continue;
-        const fill = Math.min(t.remaining, rem);
-        const pl = direction === 'long' ? (exit.price - t.price) : (t.price - exit.price);
-        t.allocatedReward += pl * fill; t.allocatedExitQty += fill; t.remaining -= fill; rem -= fill;
+        if (rem<=0||t.remaining<=0) continue;
+        const fill=Math.min(t.remaining,rem), pl=direction==='long'?(exit.price-t.price):(t.price-exit.price);
+        t.allocatedReward+=pl*fill; t.allocatedExitQty+=fill; t.remaining-=fill; rem-=fill;
       }
     });
   } else {
     exits.forEach(exit => {
       entries.forEach(t => {
-        const share = totalEntryShares > 0 ? t.qty / totalEntryShares : 0;
-        const fill = exit.qty * share;
-        const pl = direction === 'long' ? (exit.price - t.price) : (t.price - exit.price);
-        t.allocatedReward += pl * fill; t.allocatedExitQty += fill;
+        const share=totalEntryShares>0?t.qty/totalEntryShares:0, fill=exit.qty*share;
+        const pl=direction==='long'?(exit.price-t.price):(t.price-exit.price);
+        t.allocatedReward+=pl*fill; t.allocatedExitQty+=fill;
       });
     });
   }
 
   entries.forEach(e => {
-    if (e.stop !== null) {
-      const r = direction === 'long' ? (e.price - e.stop) : (e.stop - e.price);
-      e.risk = r * e.qty;
-    } else e.risk = null;
+    if (e.stop!==null) { const r=direction==='long'?(e.price-e.stop):(e.stop-e.price); e.risk=r*e.qty; } else e.risk=null;
   });
 
-  const validRisk = entries.filter(e => e.risk !== null);
-  const totalRisk = validRisk.length ? validRisk.reduce((s,e) => s+e.risk, 0) : null;
-  const totalReward = entries.reduce((s,e) => s+e.allocatedReward, 0);
-  const avgEntry = entries.reduce((s,e) => s+e.price*e.qty, 0) / totalEntryShares;
-  const rMultiple = (totalRisk && totalRisk !== 0) ? totalReward / totalRisk : null;
+  const validRisk=entries.filter(e=>e.risk!==null);
+  const totalRisk=validRisk.length?validRisk.reduce((s,e)=>s+e.risk,0):null;
+  const totalReward=entries.reduce((s,e)=>s+e.allocatedReward,0);
+  const avgEntry=entries.reduce((s,e)=>s+e.price*e.qty,0)/totalEntryShares;
+  const rMultiple=(totalRisk&&totalRisk!==0)?totalReward/totalRisk:null;
 
-  document.getElementById('avgEntry').textContent = fmt(avgEntry, 4);
-  document.getElementById('totalShares').textContent = fmt(totalEntryShares, 0);
+  document.getElementById('avgEntry').textContent=fmt(avgEntry,4);
+  document.getElementById('totalShares').textContent=fmt(totalEntryShares,0);
+  const riskEl=document.getElementById('totalRisk');
+  riskEl.textContent=totalRisk!==null?'$'+fmt(Math.abs(totalRisk)):'Missing stop(s)';
+  riskEl.className='value '+(totalRisk!==null?'negative':'neutral');
+  const rewEl=document.getElementById('totalReward');
+  rewEl.textContent=(totalReward>=0?'':'-')+'$'+fmt(Math.abs(totalReward));
+  rewEl.className='value '+(totalReward>=0?'positive':'negative');
+  const rEl=document.getElementById('rMultiple');
+  rEl.textContent=rMultiple!==null?fmt(rMultiple)+'R':'–';
+  rEl.className='value '+(rMultiple!==null?(rMultiple>=0?'positive':'negative'):'neutral');
 
-  const riskEl = document.getElementById('totalRisk');
-  riskEl.textContent = totalRisk !== null ? `$${fmt(Math.abs(totalRisk))}` : 'Missing stop(s)';
-  riskEl.className = 'value ' + (totalRisk !== null ? 'negative' : 'neutral');
+  const pct=totalEntryShares>0?totalExitShares/totalEntryShares*100:0;
+  if (totalExitShares>totalEntryShares+0.001) { noteEl.className='alloc-note warn'; noteEl.textContent=`Exit qty (${fmt(totalExitShares,0)}, ${fmt(pct,1)}%) exceeds position size.`; }
+  else if (totalExitShares<totalEntryShares-0.001) { noteEl.className='alloc-note'; noteEl.textContent=`${fmt(totalExitShares,0)} of ${fmt(totalEntryShares,0)} shares closed (${fmt(pct,1)}% — still open).`; }
+  else { noteEl.className='alloc-note ok'; noteEl.textContent=`Full position closed (${fmt(totalEntryShares,0)} shares) — ${allocMode==='fifo'?'FIFO':'Pro-Rata'}.`; }
 
-  const rewEl = document.getElementById('totalReward');
-  rewEl.textContent = `${totalReward >= 0 ? '' : '-'}$${fmt(Math.abs(totalReward))}`;
-  rewEl.className = 'value ' + (totalReward >= 0 ? 'positive' : 'negative');
-
-  const rEl = document.getElementById('rMultiple');
-  rEl.textContent = rMultiple !== null ? `${fmt(rMultiple)}R` : '–';
-  rEl.className = 'value ' + (rMultiple !== null ? (rMultiple >= 0 ? 'positive' : 'negative') : 'neutral');
-
-  const pct = totalEntryShares > 0 ? totalExitShares / totalEntryShares * 100 : 0;
-  if (totalExitShares > totalEntryShares + 0.001) {
-    noteEl.className = 'alloc-note warn';
-    noteEl.textContent = `Exit qty (${fmt(totalExitShares,0)}, ${fmt(pct,1)}%) exceeds position size.`;
-  } else if (totalExitShares < totalEntryShares - 0.001) {
-    noteEl.className = 'alloc-note';
-    noteEl.textContent = `${fmt(totalExitShares,0)} of ${fmt(totalEntryShares,0)} shares closed (${fmt(pct,1)}% — position still open).`;
-  } else {
-    noteEl.className = 'alloc-note ok';
-    noteEl.textContent = `Full position closed (${fmt(totalEntryShares,0)} shares) — ${allocMode === 'fifo' ? 'FIFO' : 'Pro-Rata'}.`;
-  }
-
-  const map = {};
+  const map={};
   entries.forEach(e => {
-    if (!map[e.tag]) map[e.tag] = { size:0, risk:0, reward:0, hasRisk:true };
-    map[e.tag].size += e.qty;
-    map[e.tag].reward += e.allocatedReward;
-    if (e.risk !== null) map[e.tag].risk += e.risk;
-    else map[e.tag].hasRisk = false;
+    if (!map[e.tag]) map[e.tag]={size:0,risk:0,reward:0,hasRisk:true};
+    map[e.tag].size+=e.qty; map[e.tag].reward+=e.allocatedReward;
+    if (e.risk!==null) map[e.tag].risk+=e.risk; else map[e.tag].hasRisk=false;
   });
-  const tbody = document.getElementById('setupTableBody');
-  tbody.innerHTML = '';
+  const tbody=document.getElementById('setupTableBody'); tbody.innerHTML='';
   Object.keys(map).forEach(tag => {
-    const s = map[tag];
-    const r = (s.hasRisk && s.risk !== 0) ? s.reward / s.risk : null;
-    const rc = r === null ? 'neutral' : (r >= 0 ? 'positive' : 'negative');
-    const rewc = s.reward >= 0 ? 'positive' : 'negative';
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><span class="tag-pill">${tag}</span></td>
-      <td class="${rc}"><strong>${r !== null ? fmt(r)+'R' : '–'}</strong></td>
-      <td>${fmt(s.size,0)}</td>
-      <td>${s.hasRisk ? '$'+fmt(Math.abs(s.risk)) : '–'}</td>
-      <td class="${rewc}">${s.reward>=0?'':'-'}$${fmt(Math.abs(s.reward))}</td>
-    `;
+    const s=map[tag], r=(s.hasRisk&&s.risk!==0)?s.reward/s.risk:null;
+    const rc=r===null?'neutral':(r>=0?'positive':'negative'), rewc=s.reward>=0?'positive':'negative';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="tag-pill">${tag}</span></td><td class="${rc}"><strong>${r!==null?fmt(r)+'R':'–'}</strong></td><td>${fmt(s.size,0)}</td><td>${s.hasRisk?'$'+fmt(Math.abs(s.risk)):'–'}</td><td class="${rewc}">${s.reward>=0?'':'-'}$${fmt(Math.abs(s.reward))}</td>`;
     tbody.appendChild(tr);
   });
 }
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   initChart();
   addEntryRow();
   addExitRow();
   setTapMode('none');
-  document.getElementById('tickerInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadChart(); });
+  document.getElementById('tickerInput').addEventListener('keydown', e => { if(e.key==='Enter') loadChart(); });
 });
 </script>
 </body>
