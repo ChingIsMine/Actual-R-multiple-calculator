@@ -182,10 +182,6 @@ table.setup-table th { color: #7d8290; font-size: 0.65rem; text-transform: upper
   font-size: 0.72rem; color: #7d8290;
 }
 footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; background: #0f1117; border-top: 1px solid #262b3a; }
-#sessionOverlay {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  pointer-events: none; z-index: 1;
-}
 </style>
 </head>
 <body>
@@ -232,11 +228,11 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
     <div class="card">
       <h2>Blended Trade Results</h2>
       <div class="results">
-        <div class="result-box"><div class="label">Avg Entry</div><div class="value neutral" id="avgEntry">–</div></div>
-        <div class="result-box"><div class="label">Total Size</div><div class="value neutral" id="totalShares">–</div></div>
-        <div class="result-box"><div class="label">Total Risk (1R)</div><div class="value neutral" id="totalRisk">–</div></div>
-        <div class="result-box"><div class="label">Total Reward</div><div class="value neutral" id="totalReward">–</div></div>
-        <div class="result-box full"><div class="label">BLENDED ACTUAL R-MULTIPLE</div><div class="value neutral" id="rMultiple">–</div></div>
+        <div class="result-box"><div class="label">Avg Entry</div><div class="value neutral" id="avgEntry">&#x2013;</div></div>
+        <div class="result-box"><div class="label">Total Size</div><div class="value neutral" id="totalShares">&#x2013;</div></div>
+        <div class="result-box"><div class="label">Total Risk (1R)</div><div class="value neutral" id="totalRisk">&#x2013;</div></div>
+        <div class="result-box"><div class="label">Total Reward</div><div class="value neutral" id="totalReward">&#x2013;</div></div>
+        <div class="result-box full"><div class="label">BLENDED ACTUAL R-MULTIPLE</div><div class="value neutral" id="rMultiple">&#x2013;</div></div>
       </div>
     </div>
     <div class="card">
@@ -246,7 +242,7 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
         <tbody id="setupTableBody"></tbody>
       </table>
     </div>
-    <footer>Actual R Calculator — Tom's trading workflow</footer>
+    <footer>Actual R Calculator &#x2014; Tom's trading workflow</footer>
   </div>
 
   <div class="right-panel">
@@ -259,9 +255,9 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
       <button class="tf-btn" id="tf1d" onclick="setTF('1d')">1d</button>
       <span class="date-sep">|</span>
       <input type="date" id="dateFrom" title="From date (leave blank for rolling range)" onchange="onDateChange()">
-      <span class="date-sep">→</span>
+      <span class="date-sep">&#x2192;</span>
       <input type="date" id="dateTo" title="To date (leave blank for today)" onchange="onDateChange()">
-      <button class="today-btn" onclick="clearDates()" title="Clear dates — use rolling range">Today</button>
+      <button class="today-btn" onclick="clearDates()" title="Clear dates &#x2014; use rolling range">Today</button>
       <button class="load-btn" onclick="loadChart()">Load</button>
       <span id="chartStatus" style="font-size:0.75rem;color:#7d8290;"></span>
     </div>
@@ -275,10 +271,9 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
       <button class="clear-lines-btn" onclick="clearLines()">Clear Lines</button>
     </div>
     <div id="chartContainer">
-      <canvas id="sessionOverlay"></canvas>
       <div class="chart-hint" id="chartHint">Enter a ticker and click "Load" to begin</div>
     </div>
-    <div class="status-bar" id="statusBar">Ready — load a chart, select a tap mode, then tap price levels to auto-fill entries/exits.</div>
+    <div class="status-bar" id="statusBar">Ready &#x2014; load a chart, select a tap mode, then tap price levels to auto-fill entries/exits.</div>
   </div>
 </div>
 
@@ -286,7 +281,7 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
 <script>
 let direction = 'long', allocMode = 'fifo', exitMode = 'shares', tapMode = 'none', currentTF = '1m';
 let chart = null, candleSeries = null, priceLines = [];
-let sessionCandles = [];   // stores ET-shifted candles for overlay use
+let sessionCandles = [];
 
 const tfMap   = { '1m':'1m',  '5m':'5m',  '15m':'15m', '1h':'60m', '1d':'1d' };
 const tfRange = { '1m':'7d',  '5m':'60d', '15m':'60d', '1h':'730d','1d':'2y' };
@@ -294,13 +289,13 @@ const tfRange = { '1m':'7d',  '5m':'60d', '15m':'60d', '1h':'730d','1d':'2y' };
 // ─── ET offset helper ────────────────────────────────────────────────────────
 function utcToEtWallClock(utcSeconds) {
   const ms = utcSeconds * 1000;
-  const fmt = new Intl.DateTimeFormat('en-US', {
+  const fmtr = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York',
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit',
     hour12: false
   });
-  const parts = fmt.formatToParts(new Date(ms));
+  const parts = fmtr.formatToParts(new Date(ms));
   const p = {};
   parts.forEach(({ type, value }) => { p[type] = value; });
   return Math.floor(Date.UTC(
@@ -309,79 +304,80 @@ function utcToEtWallClock(utcSeconds) {
   ) / 1000);
 }
 
-// ─── Session overlay ─────────────────────────────────────────────────────────
-// Pre-market  : 04:00 – 09:29 ET  → orange #ff9800 @ 15% opacity
-// Post-market : 16:00 – 20:00 ET  → blue   #2962ff @ 15% opacity
-// Regular hours (09:30 – 15:59) stay unchanged.
-//
-// Strategy: for each bar in sessionCandles whose ET wall-clock time falls in a
-// pre/post-market window, we convert that ET epoch to an x-pixel via
-// timeScale().timeToCoordinate() and paint a rect one-bar-width wide.
-
-const PRE_START  =  4 * 3600;   // 04:00 in seconds from midnight
-const PRE_END    =  9 * 3600 + 29 * 60 + 59;  // 09:29:59
-const POST_START = 16 * 3600;   // 16:00
-const POST_END   = 20 * 3600;   // 20:00
-
-function getBarSecondsFromMidnight(etEpoch) {
-  // etEpoch is already an ET wall-clock epoch (fake UTC), so just mod a day
-  const d = new Date(etEpoch * 1000);
-  return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds();
-}
-
-function drawSessionOverlay() {
-  if (!chart || !candleSeries || sessionCandles.length === 0) return;
-  const container = document.getElementById('chartContainer');
-  const canvas    = document.getElementById('sessionOverlay');
-  const W = container.clientWidth;
-  const H = container.clientHeight;
-  canvas.width  = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
-
-  // Estimate bar pixel width from first two bars
-  let barPx = 6;
-  if (sessionCandles.length >= 2) {
-    const x0 = chart.timeScale().timeToCoordinate(sessionCandles[0].time);
-    const x1 = chart.timeScale().timeToCoordinate(sessionCandles[1].time);
-    if (x0 !== null && x1 !== null) barPx = Math.abs(x1 - x0);
+// ─── Session shading primitive ───────────────────────────────────────────────
+// Implements ISeriesPrimitive so it draws directly in the chart render loop.
+// Pre-market  04:00–09:29 ET → orange rgba(255,152,0,0.15)
+// Post-market 16:00–20:00 ET → blue   rgba(41,98,255,0.15)
+class SessionShadingPrimitive {
+  constructor(candles) {
+    this._candles = candles;
+    this._series  = null;
   }
+  attached(params) { this._series = params.series; }
+  detached()       { this._series = null; }
+  updateAllViews() {}
+  paneViews()      { return [this]; }
 
-  // Group consecutive pre/post bars into spans and draw single rects
-  // This avoids thin gaps between individual bar rects.
-  let spanStart = null, spanEnd = null, spanColor = null;
+  // Called by the chart renderer for each pane view
+  renderer() { return this; }
 
-  function flushSpan() {
-    if (spanStart === null) return;
-    ctx.fillStyle = spanColor;
-    const left  = spanStart - barPx / 2;
-    const right = spanEnd   + barPx / 2;
-    ctx.fillRect(left, 0, right - left, H);
-    spanStart = spanEnd = spanColor = null;
-  }
+  draw(target) {
+    if (!this._series || this._candles.length === 0) return;
+    target.useBitmapCoordinateSpace(scope => {
+      const ctx = scope.context;
+      const H   = scope.bitmapSize.height;
+      const pr  = scope.horizontalPixelRatio;   // pixel ratio for x scaling
 
-  for (const candle of sessionCandles) {
-    const secs  = getBarSecondsFromMidnight(candle.time);
-    const isPre  = secs >= PRE_START  && secs <= PRE_END;
-    const isPost = secs >= POST_START && secs <= POST_END;
-    const color  = isPre ? 'rgba(255,152,0,0.15)' : isPost ? 'rgba(41,98,255,0.15)' : null;
-    const x = chart.timeScale().timeToCoordinate(candle.time);
-    if (x === null || x < -barPx || x > W + barPx) { flushSpan(); continue; }
-
-    if (color) {
-      if (spanColor === color) {
-        spanEnd = x; // extend current span
-      } else {
-        flushSpan();
-        spanStart = spanEnd = x;
-        spanColor = color;
+      // Estimate bar width in bitmap pixels
+      let barW = 6 * pr;
+      if (this._candles.length >= 2) {
+        const x0 = this._series.priceToCoordinate ? null :
+          (chart.timeScale().timeToCoordinate(this._candles[0].time));
+        const x1 = chart.timeScale().timeToCoordinate(this._candles[1].time);
+        const x0v = chart.timeScale().timeToCoordinate(this._candles[0].time);
+        if (x0v !== null && x1 !== null) barW = Math.abs((x1 - x0v) * pr);
       }
-    } else {
-      flushSpan();
-    }
+      if (barW < 1) barW = 1;
+
+      let spanX = null, spanRight = null, spanColor = null;
+
+      const flush = () => {
+        if (spanX === null) return;
+        ctx.fillStyle = spanColor;
+        ctx.fillRect(spanX - barW / 2, 0, spanRight - spanX + barW, H);
+        spanX = spanRight = spanColor = null;
+      };
+
+      for (const c of this._candles) {
+        const secs = (() => {
+          const d = new Date(c.time * 1000);
+          return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds();
+        })();
+        const isPre  = secs >= 4*3600 && secs < 9*3600 + 30*60;
+        const isPost = secs >= 16*3600 && secs <= 20*3600;
+        const color  = isPre  ? 'rgba(255,152,0,0.15)'
+                     : isPost ? 'rgba(41,98,255,0.15)'
+                     : null;
+
+        const xRaw = chart.timeScale().timeToCoordinate(c.time);
+        if (xRaw === null) { flush(); continue; }
+        const x = xRaw * pr;
+
+        if (color) {
+          if (spanColor === color) {
+            spanRight = x;
+          } else {
+            flush();
+            spanX = spanRight = x;
+            spanColor = color;
+          }
+        } else {
+          flush();
+        }
+      }
+      flush();
+    });
   }
-  flushSpan();
 }
 
 function setDirection(dir) {
@@ -406,8 +402,8 @@ function setExitMode(mode) {
 function setTapMode(mode) {
   tapMode = mode;
   ['tapNone','tapEntry','tapStop','tapExit'].forEach(id => document.getElementById(id).className = 'tap-btn');
-  const labels = { none:'', entry:'→ tap chart to add entry price', stop:'→ tap chart to set stop on latest entry', exit:'→ tap chart to add exit price' };
-  document.getElementById('tapModeLabel').textContent = labels[mode];
+  const labels = { none:'', entry:'&#x2192; tap chart to add entry price', stop:'&#x2192; tap chart to set stop on latest entry', exit:'&#x2192; tap chart to add exit price' };
+  document.getElementById('tapModeLabel').innerHTML = labels[mode];
   if (mode==='none') document.getElementById('tapNone').classList.add('active-entry');
   if (mode==='entry') document.getElementById('tapEntry').classList.add('active-entry');
   if (mode==='stop') document.getElementById('tapStop').classList.add('active-stop');
@@ -461,8 +457,6 @@ function initChart() {
     borderUpColor: '#4ade80', borderDownColor: '#ff6b81',
     wickUpColor: '#4ade80', wickDownColor: '#ff6b81',
   });
-  // Redraw overlay whenever the visible range changes (scroll/zoom)
-  chart.timeScale().subscribeVisibleTimeRangeChange(() => drawSessionOverlay());
   chart.subscribeClick(param => {
     if (tapMode === 'none' || !param.point) return;
     const price = candleSeries.coordinateToPrice(param.point.y);
@@ -473,10 +467,7 @@ function initChart() {
     else if (tapMode==='exit') handleTapExit(p);
   });
   window.addEventListener('resize', () => {
-    if (chart) {
-      chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
-      drawSessionOverlay();
-    }
+    if (chart) chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
   });
 }
 
@@ -489,7 +480,7 @@ function addPriceLine(price, color, title) {
 function handleTapEntry(price) {
   addEntryRow('', price, '', '');
   addPriceLine(price, '#4ade80', 'E');
-  setStatus('Entry added @ ' + price + ' — enter tag, qty, and stop in the left panel');
+  setStatus('Entry added @ ' + price + ' &#x2014; enter tag, qty, and stop in the left panel');
 }
 function handleTapStop(price) {
   const rows = document.querySelectorAll('#entriesContainer .row-entry');
@@ -504,9 +495,9 @@ function handleTapExit(price) {
   const rows = document.querySelectorAll('#exitsContainer .row-exit');
   if (rows.length > 0) rows[rows.length-1].querySelectorAll('input')[1].focus();
   addPriceLine(price, '#a78bfa', 'TP');
-  setStatus('Exit added @ ' + price + ' — enter qty or % in the left panel');
+  setStatus('Exit added @ ' + price + ' &#x2014; enter qty or % in the left panel');
 }
-function setStatus(msg) { document.getElementById('statusBar').textContent = msg; }
+function setStatus(msg) { document.getElementById('statusBar').innerHTML = msg; }
 
 // ─── Build API URL ────────────────────────────────────────────────────────────
 function buildApiUrl(ticker) {
@@ -544,7 +535,7 @@ async function loadChart() {
   const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
   if (!ticker) return;
   const statusEl = document.getElementById('chartStatus');
-  statusEl.textContent = 'Loading…';
+  statusEl.textContent = 'Loading\u2026';
   document.getElementById('chartHint').style.display = 'none';
 
   const apiUrl = buildApiUrl(ticker);
@@ -557,12 +548,12 @@ async function loadChart() {
 
   let json = null;
   for (const url of proxies) {
-    statusEl.textContent = 'Trying…';
+    statusEl.textContent = 'Trying\u2026';
     json = await tryFetch(url);
     if (json) break;
   }
   if (!json) {
-    statusEl.textContent = 'Failed — check ticker';
+    statusEl.textContent = 'Failed \u2014 check ticker';
     setStatus('Could not load "' + ticker + '". Check the symbol or try a different date range.');
     return;
   }
@@ -582,15 +573,16 @@ async function loadChart() {
 
     sessionCandles = candles;
     initChart();
+    // Attach the session shading primitive BEFORE setData so it renders behind candles
+    const primitive = new SessionShadingPrimitive(candles);
+    candleSeries.attachPrimitive(primitive);
     candleSeries.setData(candles);
     chart.timeScale().fitContent();
-    // Draw overlay after fitContent (small delay for layout to settle)
-    setTimeout(drawSessionOverlay, 50);
 
     const fromVal    = document.getElementById('dateFrom').value;
     const rangeLabel = fromVal ? fromVal : tfRange[currentTF];
-    statusEl.textContent = `${ticker} · ${candles.length} bars · ET`;
-    setStatus(`${ticker} loaded (${rangeLabel}, pre/post-market included) — axis shows U.S. ET — select a tap mode, then tap price levels.`);
+    statusEl.textContent = `${ticker} \u00b7 ${candles.length} bars \u00b7 ET`;
+    setStatus(`${ticker} loaded (${rangeLabel}, pre/post-market included) \u2014 axis shows U.S. ET \u2014 select a tap mode, then tap price levels.`);
   } catch(e) {
     statusEl.textContent = 'Parse error';
     setStatus('Chart data parse failed. Try a different timeframe or date range.');
@@ -607,7 +599,7 @@ function addEntryRow(tag='', price='', qty='', stop='') {
     <input type="number" step="any" placeholder="Price" value="${price}" oninput="calculate()">
     <input type="number" step="any" placeholder="Qty" value="${qty}" oninput="calculate()">
     <input type="number" step="any" placeholder="Stop" value="${stop}" oninput="calculate()">
-    <button class="remove-btn" onclick="removeRow(this)">×</button>
+    <button class="remove-btn" onclick="removeRow(this)">&#xd7;</button>
   `;
   container.appendChild(row);
   calculate();
@@ -619,7 +611,7 @@ function addExitRow(price='', qty='') {
   row.innerHTML = `
     <input type="number" step="any" placeholder="Exit Price" value="${price}" oninput="calculate()">
     <input type="number" step="any" placeholder="${exitMode==='shares'?'Qty':'%'}" value="${qty}" oninput="calculate()">
-    <button class="remove-btn" onclick="removeRow(this)">×</button>
+    <button class="remove-btn" onclick="removeRow(this)">&#xd7;</button>
   `;
   container.appendChild(row);
   calculate();
@@ -651,7 +643,7 @@ function getExits(totalEntryShares) {
 }
 
 // ─── Calculate ────────────────────────────────────────────────────────────────
-function fmt(n, d=2) { if (!isFinite(n)) return '–'; return n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fmt(n, d=2) { if (!isFinite(n)) return '\u2013'; return n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
 
 function calculate() {
   const entries = getEntries();
@@ -662,7 +654,7 @@ function calculate() {
 
   if (!entries.length) {
     ['avgEntry','totalShares','totalRisk','totalReward','rMultiple'].forEach(id => {
-      document.getElementById(id).textContent='–';
+      document.getElementById(id).textContent='\u2013';
       document.getElementById(id).className='value neutral';
     });
     document.getElementById('setupTableBody').innerHTML = '';
@@ -708,13 +700,13 @@ function calculate() {
   rewEl.textContent=(totalReward>=0?'':'-')+'$'+fmt(Math.abs(totalReward));
   rewEl.className='value '+(totalReward>=0?'positive':'negative');
   const rEl=document.getElementById('rMultiple');
-  rEl.textContent=rMultiple!==null?fmt(rMultiple)+'R':'–';
+  rEl.textContent=rMultiple!==null?fmt(rMultiple)+'R':'\u2013';
   rEl.className='value '+(rMultiple!==null?(rMultiple>=0?'positive':'negative'):'neutral');
 
   const pct=totalEntryShares>0?totalExitShares/totalEntryShares*100:0;
   if (totalExitShares>totalEntryShares+0.001) { noteEl.className='alloc-note warn'; noteEl.textContent=`Exit qty (${fmt(totalExitShares,0)}, ${fmt(pct,1)}%) exceeds position size.`; }
-  else if (totalExitShares<totalEntryShares-0.001) { noteEl.className='alloc-note'; noteEl.textContent=`${fmt(totalExitShares,0)} of ${fmt(totalEntryShares,0)} shares closed (${fmt(pct,1)}% — still open).`; }
-  else { noteEl.className='alloc-note ok'; noteEl.textContent=`Full position closed (${fmt(totalEntryShares,0)} shares) — ${allocMode==='fifo'?'FIFO':'Pro-Rata'}.`; }
+  else if (totalExitShares<totalEntryShares-0.001) { noteEl.className='alloc-note'; noteEl.textContent=`${fmt(totalExitShares,0)} of ${fmt(totalEntryShares,0)} shares closed (${fmt(pct,1)}% \u2014 still open).`; }
+  else { noteEl.className='alloc-note ok'; noteEl.textContent=`Full position closed (${fmt(totalEntryShares,0)} shares) \u2014 ${allocMode==='fifo'?'FIFO':'Pro-Rata'}.`; }
 
   const map={};
   entries.forEach(e => {
@@ -727,7 +719,7 @@ function calculate() {
     const s=map[tag], r=(s.hasRisk&&s.risk!==0)?s.reward/s.risk:null;
     const rc=r===null?'neutral':(r>=0?'positive':'negative'), rewc=s.reward>=0?'positive':'negative';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td><span class="tag-pill">${tag}</span></td><td class="${rc}"><strong>${r!==null?fmt(r)+'R':'–'}</strong></td><td>${fmt(s.size,0)}</td><td>${s.hasRisk?'$'+fmt(Math.abs(s.risk)):'–'}</td><td class="${rewc}">${s.reward>=0?'':'-'}$${fmt(Math.abs(s.reward))}</td>`;
+    tr.innerHTML=`<td><span class="tag-pill">${tag}</span></td><td class="${rc}"><strong>${r!==null?fmt(r)+'R':'\u2013'}</strong></td><td>${fmt(s.size,0)}</td><td>${s.hasRisk?'$'+fmt(Math.abs(s.risk)):'\u2013'}</td><td class="${rewc}">${s.reward>=0?'':'-'}$${fmt(Math.abs(s.reward))}</td>`;
     tbody.appendChild(tr);
   });
 }
