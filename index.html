@@ -144,7 +144,7 @@ table.setup-table th { color: #7d8290; font-size: 0.65rem; text-transform: upper
   padding: 6px 12px; border-radius: 6px; background: #4fd1c5; color: #0f1117;
   border: none; cursor: pointer; font-weight: 700; font-size: 0.82rem;
 }
-.date-sep { font-size: 0.72rem; color: #5a5f6e; }
+.date-label { font-size: 0.72rem; color: #7d8290; white-space: nowrap; }
 .today-btn {
   padding: 5px 9px; border-radius: 6px; border: 1px solid #302650;
   background: #1c1730; color: #a78bfa; cursor: pointer; font-size: 0.72rem; font-weight: 600;
@@ -253,11 +253,9 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
       <button class="tf-btn" id="tf15m" onclick="setTF('15m')">15m</button>
       <button class="tf-btn" id="tf1h" onclick="setTF('1h')">1h</button>
       <button class="tf-btn" id="tf1d" onclick="setTF('1d')">1d</button>
-      <span class="date-sep">|</span>
-      <input type="date" id="dateFrom" title="From date" onchange="onDateChange()">
-      <span class="date-sep">&#x2192;</span>
-      <input type="date" id="dateTo" title="To date" onchange="onDateChange()">
-      <button class="today-btn" onclick="clearDates()">Today</button>
+      <span class="date-label">End date:</span>
+      <input type="date" id="dateEnd" title="Load max bars up to this date. Leave blank for today." onchange="onDateChange()">
+      <button class="today-btn" onclick="clearDate()" title="Clear &#x2014; use today">Today</button>
       <button class="load-btn" onclick="loadChart()">Load</button>
       <span id="chartStatus" style="font-size:0.75rem;color:#7d8290;"></span>
     </div>
@@ -283,10 +281,11 @@ let direction = 'long', allocMode = 'fifo', exitMode = 'shares', tapMode = 'none
 let chart = null, candleSeries = null, priceLines = [];
 let sessionCandles = [];
 
-const tfMap   = { '1m':'1m',  '5m':'5m',  '15m':'15m', '1h':'60m', '1d':'1d' };
-const tfRange = { '1m':'7d',  '5m':'60d', '15m':'60d', '1h':'730d','1d':'2y' };
+const tfMap = { '1m':'1m', '5m':'5m', '15m':'15m', '1h':'60m', '1d':'1d' };
+// Max lookback window Yahoo allows per interval (in days)
+const tfWindow = { '1m':7, '5m':60, '15m':60, '1h':730, '1d':1825 };
 
-// ─── ET offset helper ────────────────────────────────────────────────────────
+// ─── ET offset helper ───────────────────────────────────────────────────────
 function utcToEtWallClock(utcSeconds) {
   const ms = utcSeconds * 1000;
   const fmtr = new Intl.DateTimeFormat('en-US', {
@@ -304,31 +303,22 @@ function utcToEtWallClock(utcSeconds) {
   ) / 1000);
 }
 
-// ─── Session shading — correct ISeriesPrimitive three-class structure ─────────
-// SessionRenderer  → has draw() / drawBackground()
-// SessionPaneView  → has renderer() and zOrder()
-// SessionShadingPrimitive → has paneViews(), updateAllViews(), attached(), detached()
-
+// ─── Session shading primitive ─────────────────────────────────────────────
 class SessionRenderer {
   constructor(candles, chartRef) {
     this._candles = candles;
     this._chart   = chartRef;
   }
-  // drawBackground renders behind the candles
   drawBackground(target) { this._paint(target); }
-  draw(target) {}  // nothing needed in foreground
-
+  draw(target) {}
   _paint(target) {
     if (!this._chart || this._candles.length === 0) return;
     const ts = this._chart.timeScale();
-
     target.useBitmapCoordinateSpace(scope => {
       const ctx = scope.context;
       const W   = scope.bitmapSize.width;
       const H   = scope.bitmapSize.height;
       const pr  = scope.horizontalPixelRatio;
-
-      // Bar width estimate in bitmap pixels
       let barW = 6 * pr;
       if (this._candles.length >= 2) {
         const x0 = ts.timeToCoordinate(this._candles[0].time);
@@ -336,64 +326,44 @@ class SessionRenderer {
         if (x0 !== null && x1 !== null) barW = Math.abs((x1 - x0) * pr);
       }
       if (barW < 1) barW = 1;
-
       let spanL = null, spanR = null, spanColor = null;
-
       const flush = () => {
         if (spanL === null) return;
         ctx.fillStyle = spanColor;
         ctx.fillRect(spanL, 0, spanR - spanL, H);
         spanL = spanR = spanColor = null;
       };
-
       for (const c of this._candles) {
         const d    = new Date(c.time * 1000);
         const secs = d.getUTCHours() * 3600 + d.getUTCMinutes() * 60;
-        const isPre  = secs >= 4*3600  && secs <  9*3600 + 30*60;
+        const isPre  = secs >= 4*3600  && secs < 9*3600 + 30*60;
         const isPost = secs >= 16*3600 && secs <= 20*3600;
         const color  = isPre  ? 'rgba(255,152,0,0.15)'
-                     : isPost ? 'rgba(41,98,255,0.15)'
-                     : null;
-
+                     : isPost ? 'rgba(41,98,255,0.15)' : null;
         const xCss = ts.timeToCoordinate(c.time);
         if (xCss === null) { flush(); continue; }
         const x = xCss * pr;
         if (x < -barW || x > W + barW) { flush(); continue; }
-
         if (color) {
-          if (spanColor === color) {
-            spanR = x + barW / 2;
-          } else {
-            flush();
-            spanL = x - barW / 2;
-            spanR = x + barW / 2;
-            spanColor = color;
-          }
-        } else {
-          flush();
-        }
+          if (spanColor === color) { spanR = x + barW / 2; }
+          else { flush(); spanL = x - barW / 2; spanR = x + barW / 2; spanColor = color; }
+        } else { flush(); }
       }
       flush();
     });
   }
 }
-
 class SessionPaneView {
-  constructor(candles, chartRef) {
-    this._renderer = new SessionRenderer(candles, chartRef);
-  }
-  zOrder()    { return 'bottom'; }
-  renderer()  { return this._renderer; }
+  constructor(candles, chartRef) { this._renderer = new SessionRenderer(candles, chartRef); }
+  zOrder()   { return 'bottom'; }
+  renderer() { return this._renderer; }
 }
-
 class SessionShadingPrimitive {
-  constructor(candles, chartRef) {
-    this._view = new SessionPaneView(candles, chartRef);
-  }
-  attached()        {}
-  detached()        {}
-  updateAllViews()  {}
-  paneViews()       { return [this._view]; }
+  constructor(candles, chartRef) { this._view = new SessionPaneView(candles, chartRef); }
+  attached()       {}
+  detached()       {}
+  updateAllViews() {}
+  paneViews()      { return [this._view]; }
 }
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
@@ -432,16 +402,12 @@ function setTF(tf) {
   ['1m','5m','15m','1h','1d'].forEach(t => { const el = document.getElementById('tf'+t); if(el) el.classList.toggle('active', t===tf); });
 }
 function onDateChange() {
-  const from = document.getElementById('dateFrom').value;
-  const to   = document.getElementById('dateTo').value;
-  document.getElementById('dateFrom').classList.toggle('date-active', !!from);
-  document.getElementById('dateTo').classList.toggle('date-active', !!to);
+  const v = document.getElementById('dateEnd').value;
+  document.getElementById('dateEnd').classList.toggle('date-active', !!v);
 }
-function clearDates() {
-  document.getElementById('dateFrom').value = '';
-  document.getElementById('dateTo').value   = '';
-  document.getElementById('dateFrom').classList.remove('date-active');
-  document.getElementById('dateTo').classList.remove('date-active');
+function clearDate() {
+  document.getElementById('dateEnd').value = '';
+  document.getElementById('dateEnd').classList.remove('date-active');
 }
 function clearLines() {
   if (candleSeries && priceLines.length) {
@@ -517,26 +483,25 @@ function handleTapExit(price) {
 function setStatus(msg) { document.getElementById('statusBar').innerHTML = msg; }
 
 // ─── Build API URL ────────────────────────────────────────────────────────────
+// If an end date is set: fetch from (end - max window) to end of that day.
+// If no date: use Yahoo rolling range (latest N days).
 function buildApiUrl(ticker) {
   const interval = tfMap[currentTF];
-  const fromVal  = document.getElementById('dateFrom').value;
-  const toVal    = document.getElementById('dateTo').value;
+  const endVal   = document.getElementById('dateEnd').value;
   const base = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&includePrePost=true`;
-  if (fromVal) {
-    const p1 = Math.floor(new Date(fromVal + 'T00:00:00').getTime() / 1000);
-    let endDate;
-    if (toVal) {
-      endDate = new Date(toVal + 'T23:59:59');
-    } else {
-      const windowDays = { '1m':7, '5m':60, '15m':60, '1h':730, '1d':730 };
-      endDate = new Date(fromVal + 'T23:59:59');
-      endDate.setDate(endDate.getDate() + windowDays[currentTF]);
-      const today = new Date(); if (endDate > today) endDate = today;
-    }
-    const p2 = Math.floor(endDate.getTime() / 1000);
+
+  if (endVal) {
+    // period2 = end of selected date (23:59:59 UTC)
+    const p2 = Math.floor(new Date(endVal + 'T23:59:59Z').getTime() / 1000);
+    // period1 = p2 minus max window in seconds
+    const windowSecs = tfWindow[currentTF] * 24 * 3600;
+    const p1 = p2 - windowSecs;
     return `${base}&period1=${p1}&period2=${p2}`;
   }
-  return `${base}&range=${tfRange[currentTF]}`;
+
+  // No date selected — use rolling range keywords
+  const rangeMap = { '1m':'7d', '5m':'60d', '15m':'60d', '1h':'730d', '1d':'5y' };
+  return `${base}&range=${rangeMap[currentTF]}`;
 }
 
 async function tryFetch(url, timeout = 9000) {
@@ -571,7 +536,7 @@ async function loadChart() {
   }
   if (!json) {
     statusEl.textContent = 'Failed — check ticker';
-    setStatus('Could not load "' + ticker + '". Check the symbol or try a different date range.');
+    setStatus('Could not load "' + ticker + '". Check the symbol or try a different date.');
     return;
   }
 
@@ -590,22 +555,19 @@ async function loadChart() {
 
     sessionCandles = candles;
     initChart();
-
-    // Attach primitive BEFORE setData — draws behind candles via drawBackground
     const primitive = new SessionShadingPrimitive(candles, chart);
     candleSeries.attachPrimitive(primitive);
-
     candleSeries.setData(candles);
     chart.timeScale().fitContent();
 
-    const fromVal    = document.getElementById('dateFrom').value;
-    const rangeLabel = fromVal ? fromVal : tfRange[currentTF];
+    const endVal = document.getElementById('dateEnd').value;
+    const label  = endVal ? `up to ${endVal}` : 'latest';
     statusEl.textContent = `${ticker} · ${candles.length} bars · ET`;
-    setStatus(`${ticker} loaded (${rangeLabel}, pre/post-market included) — axis shows U.S. ET — select a tap mode, then tap price levels.`);
+    setStatus(`${ticker} loaded (${label}, max bars for ${currentTF}, pre/post-market included) — axis shows U.S. ET.`);
   } catch(e) {
     console.error(e);
     statusEl.textContent = 'Parse error';
-    setStatus('Chart data parse failed. Try a different timeframe or date range.');
+    setStatus('Chart data parse failed. Try a different timeframe or date.');
   }
 }
 
