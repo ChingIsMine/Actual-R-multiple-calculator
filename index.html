@@ -3,269 +3,472 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Actual R Calculator - Multi-Setup</title>
+<title>Actual R Calculator</title>
 <style>
-  * { box-sizing: border-box; }
-  body {
-    font-family: 'Segoe UI', Arial, sans-serif;
-    background: #0f1117;
-    color: #e6e6e6;
-    margin: 0;
-    padding: 20px;
-    display: flex;
-    justify-content: center;
-  }
-  .container { max-width: 820px; width: 100%; }
-  h1 { font-size: 1.5rem; margin-bottom: 4px; color: #ffffff; }
-  .subtitle { color: #9aa0ac; font-size: 0.9rem; margin-bottom: 24px; }
-  .card {
-    background: #161923;
-    border: 1px solid #262b3a;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-  }
-  .card h2 { font-size: 1.05rem; margin: 0 0 14px 0; color: #4fd1c5; }
-  .card h2.exit-color { color: #a78bfa; }
-  .card h2.setup-color { color: #ff9f5b; }
-  .row-entry {
-    display: grid;
-    grid-template-columns: 1.3fr 1fr 0.8fr 1fr auto;
-    gap: 8px;
-    margin-bottom: 10px;
-    align-items: center;
-  }
-  .row-exit {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 8px;
-    margin-bottom: 10px;
-    align-items: center;
-  }
-  .row-header-entry {
-    display: grid;
-    grid-template-columns: 1.3fr 1fr 0.8fr 1fr auto;
-    gap: 8px;
-    font-size: 0.72rem;
-    color: #7d8290;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-  }
-  .row-header-exit {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 8px;
-    font-size: 0.72rem;
-    color: #7d8290;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-  }
-  input[type=number], input[type=text], select {
-    background: #0f1117;
-    border: 1px solid #2c3140;
-    color: #e6e6e6;
-    padding: 8px 10px;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    width: 100%;
-  }
-  input:focus, select:focus { outline: none; border-color: #4fd1c5; }
-  .remove-btn {
-    background: #2a1620;
-    color: #ff6b81;
-    border: 1px solid #4a2030;
-    border-radius: 8px;
-    width: 34px;
-    height: 34px;
-    cursor: pointer;
-    font-size: 1rem;
-    line-height: 1;
-  }
-  .remove-btn:hover { background: #3a1b28; }
-  .add-btn {
-    background: #14202a;
-    color: #4fd1c5;
-    border: 1px solid #1e3540;
-    border-radius: 8px;
-    padding: 8px 14px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    margin-top: 6px;
-  }
-  .add-btn:hover { background: #1a2a36; }
-  .add-btn.exit-btn { background: #1c1730; color: #a78bfa; border-color: #302650; }
-  .add-btn.exit-btn:hover { background: #241d3d; }
-  .direction-toggle, .alloc-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
-  .direction-toggle button, .alloc-toggle button {
-    flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #2c3140;
-    background: #0f1117; color: #9aa0ac; cursor: pointer; font-weight: 600; font-size: 0.85rem;
-  }
-  .direction-toggle button.active-long { background: #10231d; color: #4ade80; border-color: #235c43; }
-  .direction-toggle button.active-short { background: #2a1620; color: #ff6b81; border-color: #4a2030; }
-  .alloc-toggle button.active { background: #1c1730; color: #a78bfa; border-color: #302650; }
-  .alloc-hint { font-size: 0.78rem; color: #7d8290; margin-bottom: 4px; }
-  .results { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-  .result-box { background: #0f1117; border: 1px solid #262b3a; border-radius: 10px; padding: 14px; }
-  .result-box .label { font-size: 0.78rem; color: #9aa0ac; margin-bottom: 4px; }
-  .result-box .value { font-size: 1.4rem; font-weight: 700; }
-  .result-box.full { grid-column: 1 / -1; text-align: center; padding: 22px; }
-  .result-box.full .value { font-size: 2.4rem; }
-  .positive { color: #4ade80; }
-  .negative { color: #ff6b81; }
-  .neutral { color: #e6e6e6; }
-  table.setup-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-  table.setup-table th, table.setup-table td {
-    text-align: left; padding: 8px 10px; font-size: 0.85rem; border-bottom: 1px solid #262b3a;
-  }
-  table.setup-table th { color: #7d8290; font-size: 0.72rem; text-transform: uppercase; }
-  .tag-pill {
-    display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.78rem;
-    background: #14202a; color: #4fd1c5; border: 1px solid #1e3540;
-  }
-  footer { text-align: center; color: #565b68; font-size: 0.78rem; margin-top: 10px; }
-  .allocation-note {
-    font-size: 0.78rem; color: #7d8290; margin-top: 8px; padding: 8px 10px;
-    background: #0f1117; border-radius: 8px; border: 1px solid #262b3a;
-  }
-  .allocation-note.warn { color: #ff9f5b; border-color: #40301e; }
-  .allocation-note.ok { color: #4ade80; border-color: #235c43; }
-  .method-explainer {
-    background: #0f1117;
-    border: 1px solid #262b3a;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 10px;
-    margin-bottom: 4px;
-  }
-  .method-item {
-    font-size: 0.78rem;
-    color: #9aa0ac;
-    line-height: 1.5;
-    margin-bottom: 8px;
-  }
-  .method-item:last-child { margin-bottom: 0; }
-  .method-item strong { color: #a78bfa; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #0f1117;
+  color: #e6e6e6;
+  min-height: 100vh;
+}
+.app-layout {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  min-height: 100vh;
+}
+/* LEFT PANEL */
+.left-panel {
+  background: #0f1117;
+  border-right: 1px solid #262b3a;
+  overflow-y: auto;
+  padding: 16px;
+}
+h1 { font-size: 1.2rem; color: #fff; margin-bottom: 2px; }
+.subtitle { color: #7d8290; font-size: 0.78rem; margin-bottom: 14px; }
+.card {
+  background: #161923;
+  border: 1px solid #262b3a;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.card h2 { font-size: 0.9rem; margin-bottom: 10px; color: #4fd1c5; }
+.card h2.exit-color { color: #a78bfa; }
+.card h2.setup-color { color: #ff9f5b; }
+.toggle-row { display: flex; gap: 6px; margin-bottom: 10px; }
+.toggle-row button {
+  flex: 1; padding: 7px 6px; border-radius: 7px; border: 1px solid #2c3140;
+  background: #0f1117; color: #9aa0ac; cursor: pointer; font-weight: 600; font-size: 0.78rem;
+}
+.toggle-row button.active-long { background: #10231d; color: #4ade80; border-color: #235c43; }
+.toggle-row button.active-short { background: #2a1620; color: #ff6b81; border-color: #4a2030; }
+.toggle-row button.active { background: #1c1730; color: #a78bfa; border-color: #302650; }
+.toggle-row button.active-teal { background: #14202a; color: #4fd1c5; border-color: #1e3540; }
+.row-entry {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr 0.7fr 0.9fr auto;
+  gap: 5px; margin-bottom: 7px; align-items: center;
+}
+.row-exit {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 5px; margin-bottom: 7px; align-items: center;
+}
+.row-header-entry {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr 0.7fr 0.9fr auto;
+  gap: 5px; font-size: 0.65rem; color: #7d8290; margin-bottom: 4px;
+  text-transform: uppercase; letter-spacing: 0.02em;
+}
+.row-header-exit {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 5px; font-size: 0.65rem; color: #7d8290; margin-bottom: 4px;
+  text-transform: uppercase; letter-spacing: 0.02em;
+}
+input[type=number], input[type=text] {
+  background: #0f1117; border: 1px solid #2c3140; color: #e6e6e6;
+  padding: 6px 7px; border-radius: 6px; font-size: 0.82rem; width: 100%;
+}
+input.tapped { border-color: #4fd1c5; background: #0f1a1e; }
+input:focus { outline: none; border-color: #4fd1c5; }
+.remove-btn {
+  background: #2a1620; color: #ff6b81; border: 1px solid #4a2030;
+  border-radius: 6px; width: 28px; height: 28px; cursor: pointer; font-size: 0.9rem;
+}
+.add-btn {
+  background: #14202a; color: #4fd1c5; border: 1px solid #1e3540;
+  border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 0.78rem; margin-top: 4px;
+}
+.add-btn.exit-btn { background: #1c1730; color: #a78bfa; border-color: #302650; }
+.results { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.result-box { background: #0f1117; border: 1px solid #262b3a; border-radius: 8px; padding: 10px; }
+.result-box .label { font-size: 0.68rem; color: #9aa0ac; margin-bottom: 2px; }
+.result-box .value { font-size: 1.15rem; font-weight: 700; }
+.result-box.full { grid-column: 1/-1; text-align: center; padding: 14px; }
+.result-box.full .value { font-size: 2rem; }
+.positive { color: #4ade80; }
+.negative { color: #ff6b81; }
+.neutral { color: #e6e6e6; }
+table.setup-table { width: 100%; border-collapse: collapse; }
+table.setup-table th, table.setup-table td {
+  text-align: left; padding: 6px 8px; font-size: 0.78rem; border-bottom: 1px solid #262b3a;
+}
+table.setup-table th { color: #7d8290; font-size: 0.65rem; text-transform: uppercase; }
+.tag-pill {
+  display: inline-block; padding: 2px 6px; border-radius: 5px; font-size: 0.72rem;
+  background: #14202a; color: #4fd1c5; border: 1px solid #1e3540;
+}
+.alloc-note {
+  font-size: 0.72rem; color: #7d8290; margin-top: 6px; padding: 6px 8px;
+  background: #0f1117; border-radius: 6px; border: 1px solid #262b3a;
+}
+.alloc-note.warn { color: #ff9f5b; border-color: #40301e; }
+.alloc-note.ok { color: #4ade80; border-color: #235c43; }
+.method-explainer {
+  background: #0f1117; border: 1px solid #262b3a; border-radius: 6px;
+  padding: 8px 10px; margin-top: 8px;
+}
+.method-item { font-size: 0.72rem; color: #9aa0ac; line-height: 1.4; margin-bottom: 6px; }
+.method-item:last-child { margin-bottom: 0; }
+.method-item strong { color: #a78bfa; }
+/* RIGHT PANEL */
+.right-panel {
+  display: flex; flex-direction: column; background: #0a0c10;
+}
+.chart-toolbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; background: #0f1117; border-bottom: 1px solid #262b3a;
+  flex-wrap: wrap;
+}
+.chart-toolbar input[type=text] {
+  width: 90px; padding: 6px 8px; font-size: 0.85rem; text-transform: uppercase;
+}
+.tf-btn {
+  padding: 5px 9px; border-radius: 6px; border: 1px solid #2c3140;
+  background: #0f1117; color: #9aa0ac; cursor: pointer; font-size: 0.75rem; font-weight: 600;
+}
+.tf-btn.active { background: #14202a; color: #4fd1c5; border-color: #1e3540; }
+.load-btn {
+  padding: 6px 12px; border-radius: 6px; background: #4fd1c5; color: #0f1117;
+  border: none; cursor: pointer; font-weight: 700; font-size: 0.82rem;
+}
+.tap-mode-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; background: #0d0f18; border-bottom: 1px solid #262b3a;
+  overflow-x: auto; flex-wrap: nowrap;
+}
+.tap-mode-bar span { font-size: 0.72rem; color: #7d8290; white-space: nowrap; }
+.tap-btn {
+  padding: 5px 10px; border-radius: 6px; border: 1px solid #2c3140;
+  background: #0f1117; color: #9aa0ac; cursor: pointer; font-size: 0.72rem;
+  white-space: nowrap;
+}
+.tap-btn.active-entry { background: #10231d; color: #4ade80; border-color: #235c43; }
+.tap-btn.active-exit { background: #1c1730; color: #a78bfa; border-color: #302650; }
+.tap-btn.active-stop { background: #2a1620; color: #ff6b81; border-color: #4a2030; }
+#chartContainer { flex: 1; position: relative; min-height: 0; }
+.chart-hint {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(15,17,23,0.85); border: 1px solid #262b3a; border-radius: 8px;
+  padding: 7px 14px; font-size: 0.75rem; color: #9aa0ac; pointer-events: none;
+  white-space: nowrap;
+}
+.status-bar {
+  padding: 6px 14px; background: #0f1117; border-top: 1px solid #262b3a;
+  font-size: 0.72rem; color: #7d8290;
+}
+footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; background: #0f1117; border-top: 1px solid #262b3a; }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>Actual R Calculator</h1>
-  <div class="subtitle">Calculates blended trade R-multiple AND per-setup R-multiple, for positions built from multiple setups (e.g. ORB entry + breakout add) with different stops and sizes.</div>
+<div class="app-layout">
 
-  <div class="card">
-    <h2>Direction</h2>
-    <div class="direction-toggle">
-      <button id="btnLong" class="active-long" onclick="setDirection('long')">LONG</button>
-      <button id="btnShort" onclick="setDirection('short')">SHORT</button>
-    </div>
-  </div>
+  <!-- LEFT PANEL: Calculator -->
+  <div class="left-panel">
+    <h1>Actual R Calculator</h1>
+    <div class="subtitle">Tap chart levels to set prices. Blended + per-setup R-multiple.</div>
 
-  <div class="card">
-    <h2 class="setup-color">Entries (by Setup)</h2>
-    <div class="row-header-entry"><div>Setup Tag</div><div>Entry Price</div><div>Qty</div><div>Stop Price</div><div></div></div>
-    <div id="entriesContainer"></div>
-    <button class="add-btn" onclick="addEntryRow()">+ Add Entry</button>
-  </div>
-
-  <div class="card">
-    <h2 class="exit-color">Exits (Partials)</h2>
-    <div class="alloc-toggle" style="margin-bottom:12px;">
-      <button id="exitQtyTypeShares" class="active" onclick="setExitQtyType('shares')">Enter as Shares</button>
-      <button id="exitQtyTypePercent" onclick="setExitQtyType('percent')">Enter as %</button>
-    </div>
-    <div class="row-header-exit"><div>Exit Price</div><div id="exitQtyHeader">Qty</div><div></div></div>
-    <div id="exitsContainer"></div>
-    <button class="add-btn exit-btn" onclick="addExitRow()">+ Add Exit</button>
-
-    <div class="alloc-hint" style="margin-top:14px;">How should exits be attributed back to each setup?</div>
-    <div class="alloc-toggle">
-      <button id="allocFifo" class="active" onclick="setAllocMode('fifo')">FIFO (fill order)</button>
-      <button id="allocPro" onclick="setAllocMode('prorata')">Pro-Rata (by size)</button>
-    </div>
-    <div class="method-explainer">
-      <div class="method-item">
-        <strong>FIFO (First In, First Out):</strong> exits close out your earliest entry first. If your ORB entry filled before your breakout add, partial exits are credited entirely to the ORB shares until they're fully closed, then the next exits move to the add. This mirrors how most brokers actually match closing fills against open lots.
-      </div>
-      <div class="method-item">
-        <strong>Pro-Rata (by size):</strong> every exit is split across all open setups proportionally to how much size each contributed. If ORB is 40% of your total position and the add is 60%, every partial sale is divided 40/60 between them regardless of which was entered first. This spreads outcome evenly rather than favoring whichever setup happened to be filled first.
+    <div class="card">
+      <h2>Direction</h2>
+      <div class="toggle-row">
+        <button id="btnLong" class="active-long" onclick="setDirection('long')">LONG</button>
+        <button id="btnShort" onclick="setDirection('short')">SHORT</button>
       </div>
     </div>
-    <div class="allocation-note" id="allocationNote">Enter entries and exits to check allocation.</div>
-  </div>
 
-  <div class="card">
-    <h2>Blended Trade Results</h2>
-    <div class="results">
-      <div class="result-box"><div class="label">Avg Entry Price</div><div class="value neutral" id="avgEntry">–</div></div>
-      <div class="result-box"><div class="label">Total Position Size</div><div class="value neutral" id="totalShares">–</div></div>
-      <div class="result-box"><div class="label">Total Risk ($, 1R)</div><div class="value neutral" id="totalRisk">–</div></div>
-      <div class="result-box"><div class="label">Total Reward ($)</div><div class="value neutral" id="totalReward">–</div></div>
-      <div class="result-box full"><div class="label">BLENDED ACTUAL R-MULTIPLE</div><div class="value neutral" id="rMultiple">–</div></div>
+    <div class="card">
+      <h2 class="setup-color">Entries (by Setup)</h2>
+      <div class="row-header-entry"><div>Tag</div><div>Entry</div><div>Qty</div><div>Stop</div><div></div></div>
+      <div id="entriesContainer"></div>
+      <button class="add-btn" onclick="addEntryRow()">+ Add Entry</button>
     </div>
+
+    <div class="card">
+      <h2 class="exit-color">Exits (Partials)</h2>
+      <div class="toggle-row">
+        <button id="exitShares" class="active-teal" onclick="setExitMode('shares')">Shares</button>
+        <button id="exitPct" onclick="setExitMode('percent')">%</button>
+      </div>
+      <div class="row-header-exit"><div>Exit Price</div><div id="exitQtyHeader">Qty</div><div></div></div>
+      <div id="exitsContainer"></div>
+      <button class="add-btn exit-btn" onclick="addExitRow()">+ Add Exit</button>
+      <div style="margin-top:10px; font-size:0.72rem; color:#7d8290;">Exit attribution to setups:</div>
+      <div class="toggle-row" style="margin-top:5px;">
+        <button id="allocFifo" class="active" onclick="setAllocMode('fifo')">FIFO</button>
+        <button id="allocPro" onclick="setAllocMode('prorata')">Pro-Rata</button>
+      </div>
+      <div class="method-explainer">
+        <div class="method-item"><strong>FIFO (First In, First Out):</strong> exits close out your earliest entry first. Partial exits are credited entirely to the first tranche until it's fully closed, then move to the next. Mirrors how most brokers actually match closing fills against open lots.</div>
+        <div class="method-item"><strong>Pro-Rata (by size):</strong> every exit is split across all open setups proportionally to how much size each contributed. If ORB is 40% of your position and the add is 60%, every partial is divided 40/60 between them regardless of fill order.</div>
+      </div>
+      <div class="alloc-note" id="allocationNote">Enter entries and exits to see allocation.</div>
+    </div>
+
+    <div class="card">
+      <h2>Blended Trade Results</h2>
+      <div class="results">
+        <div class="result-box"><div class="label">Avg Entry</div><div class="value neutral" id="avgEntry">–</div></div>
+        <div class="result-box"><div class="label">Total Size</div><div class="value neutral" id="totalShares">–</div></div>
+        <div class="result-box"><div class="label">Total Risk (1R)</div><div class="value neutral" id="totalRisk">–</div></div>
+        <div class="result-box"><div class="label">Total Reward</div><div class="value neutral" id="totalReward">–</div></div>
+        <div class="result-box full"><div class="label">BLENDED ACTUAL R-MULTIPLE</div><div class="value neutral" id="rMultiple">–</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="setup-color">Per-Setup Breakdown</h2>
+      <table class="setup-table">
+        <thead><tr><th>Setup</th><th>R-Multiple</th><th>Size</th><th>Risk</th><th>Reward</th></tr></thead>
+        <tbody id="setupTableBody"></tbody>
+      </table>
+    </div>
+
+    <footer>Actual R Calculator — Tom's trading workflow</footer>
   </div>
 
-  <div class="card">
-    <h2 class="setup-color">Per-Setup Breakdown</h2>
-    <table class="setup-table" id="setupTable">
-      <thead><tr><th>Setup</th><th>R-Multiple</th><th>Size</th><th>Risk ($)</th><th>Reward ($)</th></tr></thead>
-      <tbody id="setupTableBody"></tbody>
-    </table>
+  <!-- RIGHT PANEL: Chart -->
+  <div class="right-panel">
+    <div class="chart-toolbar">
+      <input type="text" id="tickerInput" placeholder="NVDA" value="NVDA">
+      <button class="tf-btn active" id="tf1m" onclick="setTF('1m')">1m</button>
+      <button class="tf-btn" id="tf5m" onclick="setTF('5m')">5m</button>
+      <button class="tf-btn" id="tf15m" onclick="setTF('15m')">15m</button>
+      <button class="tf-btn" id="tf1h" onclick="setTF('1h')">1h</button>
+      <button class="tf-btn" id="tf1d" onclick="setTF('1d')">1d</button>
+      <button class="load-btn" onclick="loadChart()">Load Chart</button>
+      <span id="chartStatus" style="font-size:0.75rem;color:#7d8290;margin-left:4px;"></span>
+    </div>
+
+    <div class="tap-mode-bar">
+      <span>TAP TO SET:</span>
+      <button class="tap-btn" id="tapNone" onclick="setTapMode('none')">Off</button>
+      <button class="tap-btn" id="tapEntry" onclick="setTapMode('entry')">+ Entry</button>
+      <button class="tap-btn" id="tapStop" onclick="setTapMode('stop')">Set Stop</button>
+      <button class="tap-btn" id="tapExit" onclick="setTapMode('exit')">+ Exit</button>
+      <span id="tapModeLabel" style="font-size:0.72rem;color:#4fd1c5;margin-left:4px;"></span>
+    </div>
+
+    <div id="chartContainer">
+      <div class="chart-hint" id="chartHint">Enter a ticker and click "Load Chart" to begin</div>
+    </div>
+
+    <div class="status-bar" id="statusBar">Ready — load a chart, select a tap mode, then tap price levels to auto-fill entries/exits.</div>
   </div>
 
-  <footer>Built for Tom's day trading workflow — tranche-level entries tagged by setup, FIFO/pro-rata exit allocation, blended + per-setup R-multiple.</footer>
 </div>
 
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script>
+// ─── State ───────────────────────────────────────────────────────────────────
 let direction = 'long';
 let allocMode = 'fifo';
-let exitQtyType = 'shares';
+let exitMode = 'shares';
+let tapMode = 'none';
+let currentTF = '1m';
+let chart = null;
+let candleSeries = null;
+let priceLines = [];
 
+// ─── Direction ───────────────────────────────────────────────────────────────
 function setDirection(dir) {
   direction = dir;
   document.getElementById('btnLong').classList.toggle('active-long', dir === 'long');
   document.getElementById('btnShort').classList.toggle('active-short', dir === 'short');
   calculate();
 }
-
 function setAllocMode(mode) {
   allocMode = mode;
   document.getElementById('allocFifo').classList.toggle('active', mode === 'fifo');
   document.getElementById('allocPro').classList.toggle('active', mode === 'prorata');
   calculate();
 }
-
-function setExitQtyType(type) {
-  exitQtyType = type;
-  document.getElementById('exitQtyTypeShares').classList.toggle('active', type === 'shares');
-  document.getElementById('exitQtyTypePercent').classList.toggle('active', type === 'percent');
-  document.getElementById('exitQtyHeader').textContent = type === 'shares' ? 'Qty' : 'Percent (%)';
+function setExitMode(mode) {
+  exitMode = mode;
+  document.getElementById('exitShares').classList.toggle('active-teal', mode === 'shares');
+  document.getElementById('exitPct').classList.toggle('active-teal', mode === 'percent');
+  document.getElementById('exitQtyHeader').textContent = mode === 'shares' ? 'Qty' : 'Percent (%)';
   calculate();
 }
 
-function addEntryRow(tag = '', price = '', qty = '', stop = '') {
+// ─── Tap Mode ─────────────────────────────────────────────────────────────────
+function setTapMode(mode) {
+  tapMode = mode;
+  ['tapNone','tapEntry','tapStop','tapExit'].forEach(id => {
+    document.getElementById(id).className = 'tap-btn';
+  });
+  const labels = {
+    none: '',
+    entry: '→ tap chart to add entry price',
+    stop: '→ tap chart to set stop on latest entry row',
+    exit: '→ tap chart to add exit price'
+  };
+  document.getElementById('tapModeLabel').textContent = labels[mode];
+  if (mode === 'none') document.getElementById('tapNone').classList.add('active-entry');
+  if (mode === 'entry') document.getElementById('tapEntry').classList.add('active-entry');
+  if (mode === 'stop') document.getElementById('tapStop').classList.add('active-stop');
+  if (mode === 'exit') document.getElementById('tapExit').classList.add('active-exit');
+  if (chart) chart.applyOptions({ handleScroll: mode === 'none', handleScale: mode === 'none' });
+}
+
+// ─── TF ───────────────────────────────────────────────────────────────────────
+function setTF(tf) {
+  currentTF = tf;
+  ['1m','5m','15m','1h','1d'].forEach(t => {
+    const el = document.getElementById('tf'+t);
+    if (el) el.classList.toggle('active', t === tf);
+  });
+}
+
+// ─── Chart Init ──────────────────────────────────────────────────────────────
+function initChart() {
+  const container = document.getElementById('chartContainer');
+  if (chart) { chart.remove(); chart = null; candleSeries = null; priceLines = []; }
+  chart = LightweightCharts.createChart(container, {
+    width: container.clientWidth,
+    height: container.clientHeight,
+    layout: { background: { color: '#0a0c10' }, textColor: '#9aa0ac' },
+    grid: { vertLines: { color: '#1a1d26' }, horzLines: { color: '#1a1d26' } },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    rightPriceScale: { borderColor: '#262b3a' },
+    timeScale: { borderColor: '#262b3a', timeVisible: true, secondsVisible: false },
+  });
+  candleSeries = chart.addCandlestickSeries({
+    upColor: '#4ade80', downColor: '#ff6b81',
+    borderUpColor: '#4ade80', borderDownColor: '#ff6b81',
+    wickUpColor: '#4ade80', wickDownColor: '#ff6b81',
+  });
+
+  chart.subscribeClick(param => {
+    if (tapMode === 'none' || !param.point) return;
+    const price = candleSeries.coordinateToPrice(param.point.y);
+    if (price === null) return;
+    const p = parseFloat(price.toFixed(4));
+    if (tapMode === 'entry') handleTapEntry(p);
+    else if (tapMode === 'stop') handleTapStop(p);
+    else if (tapMode === 'exit') handleTapExit(p);
+  });
+
+  window.addEventListener('resize', () => {
+    if (chart) chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+  });
+}
+
+function addPriceLine(price, color, title) {
+  if (!candleSeries) return null;
+  const line = candleSeries.createPriceLine({
+    price, color, lineWidth: 1,
+    lineStyle: LightweightCharts.LineStyle.Dashed,
+    axisLabelVisible: true, title
+  });
+  priceLines.push(line);
+  return line;
+}
+
+// ─── Tap Handlers ────────────────────────────────────────────────────────────
+function handleTapEntry(price) {
+  addEntryRow('', price, '', '');
+  addPriceLine(price, '#4ade80', 'E');
+  setStatus(`Entry added @ ${price} — enter tag, qty, and stop in the left panel`);
+}
+
+function handleTapStop(price) {
+  const rows = document.querySelectorAll('#entriesContainer .row-entry');
+  let targeted = null;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const stopInput = rows[i].querySelectorAll('input')[3];
+    if (!stopInput.value) { targeted = stopInput; break; }
+  }
+  if (!targeted && rows.length > 0) {
+    targeted = rows[rows.length-1].querySelectorAll('input')[3];
+  }
+  if (targeted) {
+    targeted.value = price;
+    targeted.classList.add('tapped');
+    setTimeout(() => targeted.classList.remove('tapped'), 1500);
+    addPriceLine(price, '#ff6b81', 'SL');
+    calculate();
+  }
+  setStatus(`Stop set @ ${price}`);
+}
+
+function handleTapExit(price) {
+  addExitRow(price, '');
+  const rows = document.querySelectorAll('#exitsContainer .row-exit');
+  if (rows.length > 0) {
+    rows[rows.length-1].querySelectorAll('input')[1].focus();
+  }
+  addPriceLine(price, '#a78bfa', 'TP');
+  setStatus(`Exit added @ ${price} — enter qty or % in the left panel`);
+}
+
+function setStatus(msg) {
+  document.getElementById('statusBar').textContent = msg;
+}
+
+// ─── Chart Data Loading ───────────────────────────────────────────────────────
+const tfMap  = { '1m':'1m', '5m':'5m', '15m':'15m', '1h':'60m', '1d':'1d' };
+const tfRange = { '1m':'1d', '5m':'5d', '15m':'5d', '1h':'60d', '1d':'1y' };
+
+async function loadChart() {
+  const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+  if (!ticker) return;
+  const statusEl = document.getElementById('chartStatus');
+  statusEl.textContent = 'Loading…';
+  document.getElementById('chartHint').style.display = 'none';
+
+  if (!chart) initChart();
+
+  const interval = tfMap[currentTF];
+  const range = tfRange[currentTF];
+  const proxy = 'https://corsproxy.io/?';
+  const url = `${proxy}https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&range=${range}`;
+
+  try {
+    const res = await fetch(url);
+    const json = await res.json();
+    const result = json.chart?.result?.[0];
+    if (!result) { statusEl.textContent = 'Symbol not found'; return; }
+    const ts = result.timestamp;
+    const q = result.indicators.quote[0];
+    const candles = ts.map((t, i) => ({
+      time: t,
+      open: q.open[i], high: q.high[i], low: q.low[i], close: q.close[i]
+    })).filter(c => c.open && c.high && c.low && c.close);
+    candleSeries.setData(candles);
+    chart.timeScale().fitContent();
+    statusEl.textContent = `${ticker} loaded (${candles.length} bars)`;
+    setStatus(`${ticker} chart loaded — select a tap mode above, then tap price levels on the chart`);
+  } catch(e) {
+    statusEl.textContent = 'Load failed';
+    setStatus('Chart load failed. You can still manually type prices in the left panel.');
+  }
+}
+
+// ─── Row Management ──────────────────────────────────────────────────────────
+function addEntryRow(tag='', price='', qty='', stop='') {
   const container = document.getElementById('entriesContainer');
   const row = document.createElement('div');
   row.className = 'row-entry';
   row.innerHTML = `
-    <input type="text" placeholder="e.g. ORB" value="${tag}" oninput="calculate()">
-    <input type="number" step="any" placeholder="Entry Price" value="${price}" oninput="calculate()">
+    <input type="text" placeholder="ORB" value="${tag}" oninput="calculate()">
+    <input type="number" step="any" placeholder="Price" value="${price}" oninput="calculate()">
     <input type="number" step="any" placeholder="Qty" value="${qty}" oninput="calculate()">
-    <input type="number" step="any" placeholder="Stop Price" value="${stop}" oninput="calculate()">
+    <input type="number" step="any" placeholder="Stop" value="${stop}" oninput="calculate()">
     <button class="remove-btn" onclick="removeRow(this)">×</button>
   `;
   container.appendChild(row);
   calculate();
 }
 
-function addExitRow(price = '', qty = '') {
+function addExitRow(price='', qty='') {
   const container = document.getElementById('exitsContainer');
   const row = document.createElement('div');
   row.className = 'row-exit';
   row.innerHTML = `
     <input type="number" step="any" placeholder="Exit Price" value="${price}" oninput="calculate()">
-    <input type="number" step="any" placeholder="${exitQtyType === 'shares' ? 'Qty' : '%'}" value="${qty}" oninput="calculate()">
+    <input type="number" step="any" placeholder="${exitMode === 'shares' ? 'Qty' : '%'}" value="${qty}" oninput="calculate()">
     <button class="remove-btn" onclick="removeRow(this)">×</button>
   `;
   container.appendChild(row);
@@ -277,111 +480,90 @@ function removeRow(btn) {
   calculate();
 }
 
+// ─── Data Getters ─────────────────────────────────────────────────────────────
 function getEntries() {
-  const rows = document.querySelectorAll('#entriesContainer .row-entry');
-  const data = [];
-  rows.forEach(row => {
+  return [...document.querySelectorAll('#entriesContainer .row-entry')].map(row => {
     const inputs = row.querySelectorAll('input');
     const tag = inputs[0].value.trim() || 'Untagged';
     const price = parseFloat(inputs[1].value);
     const qty = parseFloat(inputs[2].value);
     const stop = parseFloat(inputs[3].value);
-    if (!isNaN(price) && !isNaN(qty) && qty > 0) {
-      data.push({ tag, price, qty, stop: isNaN(stop) ? null : stop, remaining: qty });
-    }
-  });
-  return data;
+    if (!isNaN(price) && !isNaN(qty) && qty > 0)
+      return { tag, price, qty, stop: isNaN(stop) ? null : stop, remaining: qty, allocatedReward: 0, allocatedExitQty: 0 };
+    return null;
+  }).filter(Boolean);
 }
 
 function getExits(totalEntryShares) {
-  const rows = document.querySelectorAll('#exitsContainer .row-exit');
-  const data = [];
-  rows.forEach(row => {
+  return [...document.querySelectorAll('#exitsContainer .row-exit')].map(row => {
     const inputs = row.querySelectorAll('input');
     const price = parseFloat(inputs[0].value);
     let qty = parseFloat(inputs[1].value);
     if (!isNaN(price) && !isNaN(qty) && qty > 0) {
-      if (exitQtyType === 'percent' && totalEntryShares) {
-        qty = (qty / 100) * totalEntryShares;
-      }
-      data.push({ price, qty });
+      if (exitMode === 'percent' && totalEntryShares) qty = (qty / 100) * totalEntryShares;
+      return { price, qty };
     }
-  });
-  return data;
+    return null;
+  }).filter(Boolean);
 }
 
-function fmt(n, decimals = 2) {
+// ─── Calculate ────────────────────────────────────────────────────────────────
+function fmt(n, d=2) {
   if (!isFinite(n)) return '–';
-  return n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  return n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
 function calculate() {
   const entries = getEntries();
-  const totalEntryShares = entries.reduce((s, e) => s + e.qty, 0);
+  const totalEntryShares = entries.reduce((s,e) => s+e.qty, 0);
   const exits = getExits(totalEntryShares);
-  const totalExitShares = exits.reduce((s, e) => s + e.qty, 0);
-
+  const totalExitShares = exits.reduce((s,e) => s+e.qty, 0);
   const noteEl = document.getElementById('allocationNote');
 
-  if (entries.length === 0) {
-    document.getElementById('avgEntry').textContent = '–';
-    document.getElementById('totalShares').textContent = '–';
-    document.getElementById('totalRisk').textContent = '–';
-    document.getElementById('totalReward').textContent = '–';
-    document.getElementById('rMultiple').textContent = '–';
+  if (!entries.length) {
+    ['avgEntry','totalShares','totalRisk','totalReward','rMultiple'].forEach(id => {
+      document.getElementById(id).textContent = '–';
+      document.getElementById(id).className = 'value neutral';
+    });
     document.getElementById('setupTableBody').innerHTML = '';
-    noteEl.className = 'allocation-note';
-    noteEl.textContent = 'Enter entries and exits to check allocation.';
+    noteEl.className = 'alloc-note'; noteEl.textContent = 'Enter entries and exits to see allocation.';
     return;
   }
 
-  // allocate exits to entry tranches
-  entries.forEach(e => e.remaining = e.qty);
-  entries.forEach(e => { e.allocatedReward = 0; e.allocatedExitQty = 0; });
-
+  // allocate
   if (allocMode === 'fifo') {
     exits.forEach(exit => {
-      let remainingExitQty = exit.qty;
-      for (const tranche of entries) {
-        if (remainingExitQty <= 0) break;
-        if (tranche.remaining <= 0) continue;
-        const fillQty = Math.min(tranche.remaining, remainingExitQty);
-        const plPerShare = direction === 'long' ? (exit.price - tranche.price) : (tranche.price - exit.price);
-        tranche.allocatedReward += plPerShare * fillQty;
-        tranche.allocatedExitQty += fillQty;
-        tranche.remaining -= fillQty;
-        remainingExitQty -= fillQty;
+      let rem = exit.qty;
+      for (const t of entries) {
+        if (rem <= 0 || t.remaining <= 0) continue;
+        const fill = Math.min(t.remaining, rem);
+        const pl = direction === 'long' ? (exit.price - t.price) : (t.price - exit.price);
+        t.allocatedReward += pl * fill; t.allocatedExitQty += fill; t.remaining -= fill; rem -= fill;
       }
     });
   } else {
     exits.forEach(exit => {
-      entries.forEach(tranche => {
-        const share = totalEntryShares > 0 ? (tranche.qty / totalEntryShares) : 0;
-        const fillQty = exit.qty * share;
-        const plPerShare = direction === 'long' ? (exit.price - tranche.price) : (tranche.price - exit.price);
-        tranche.allocatedReward += plPerShare * fillQty;
-        tranche.allocatedExitQty += fillQty;
+      entries.forEach(t => {
+        const share = totalEntryShares > 0 ? t.qty / totalEntryShares : 0;
+        const fill = exit.qty * share;
+        const pl = direction === 'long' ? (exit.price - t.price) : (t.price - exit.price);
+        t.allocatedReward += pl * fill; t.allocatedExitQty += fill;
       });
     });
   }
 
-  // compute risk per tranche
   entries.forEach(e => {
     if (e.stop !== null) {
-      const riskPerShare = direction === 'long' ? (e.price - e.stop) : (e.stop - e.price);
-      e.risk = riskPerShare * e.qty;
-    } else {
-      e.risk = null;
-    }
+      const r = direction === 'long' ? (e.price - e.stop) : (e.stop - e.price);
+      e.risk = r * e.qty;
+    } else e.risk = null;
   });
 
-  const validRiskEntries = entries.filter(e => e.risk !== null);
-  const totalRisk = validRiskEntries.length > 0 ? validRiskEntries.reduce((s, e) => s + e.risk, 0) : null;
-  const totalReward = entries.reduce((s, e) => s + e.allocatedReward, 0);
-  const avgEntry = entries.reduce((s, e) => s + e.price * e.qty, 0) / totalEntryShares;
-
-  let rMultiple = null;
-  if (totalRisk !== null && totalRisk !== 0) rMultiple = totalReward / totalRisk;
+  const validRisk = entries.filter(e => e.risk !== null);
+  const totalRisk = validRisk.length ? validRisk.reduce((s,e) => s+e.risk, 0) : null;
+  const totalReward = entries.reduce((s,e) => s+e.allocatedReward, 0);
+  const avgEntry = entries.reduce((s,e) => s+e.price*e.qty, 0) / totalEntryShares;
+  const rMultiple = (totalRisk && totalRisk !== 0) ? totalReward / totalRisk : null;
 
   document.getElementById('avgEntry').textContent = fmt(avgEntry, 4);
   document.getElementById('totalShares').textContent = fmt(totalEntryShares, 0);
@@ -390,62 +572,61 @@ function calculate() {
   riskEl.textContent = totalRisk !== null ? `$${fmt(Math.abs(totalRisk))}` : 'Missing stop(s)';
   riskEl.className = 'value ' + (totalRisk !== null ? 'negative' : 'neutral');
 
-  const rewardEl = document.getElementById('totalReward');
-  rewardEl.textContent = `${totalReward >= 0 ? '' : '-'}$${fmt(Math.abs(totalReward))}`;
-  rewardEl.className = 'value ' + (totalReward >= 0 ? 'positive' : 'negative');
+  const rewEl = document.getElementById('totalReward');
+  rewEl.textContent = `${totalReward >= 0 ? '' : '-'}$${fmt(Math.abs(totalReward))}`;
+  rewEl.className = 'value ' + (totalReward >= 0 ? 'positive' : 'negative');
 
   const rEl = document.getElementById('rMultiple');
   rEl.textContent = rMultiple !== null ? `${fmt(rMultiple)}R` : '–';
   rEl.className = 'value ' + (rMultiple !== null ? (rMultiple >= 0 ? 'positive' : 'negative') : 'neutral');
 
-  // allocation note
-  const exitPctOfTotal = totalEntryShares > 0 ? (totalExitShares / totalEntryShares * 100) : 0;
+  const pct = totalEntryShares > 0 ? totalExitShares / totalEntryShares * 100 : 0;
   if (totalExitShares > totalEntryShares + 0.001) {
-    noteEl.className = 'allocation-note warn';
-    noteEl.textContent = `Exit qty (${fmt(totalExitShares,0)} shares, ${fmt(exitPctOfTotal,1)}%) exceeds total entry size (${fmt(totalEntryShares,0)}).`;
+    noteEl.className = 'alloc-note warn';
+    noteEl.textContent = `Exit qty (${fmt(totalExitShares,0)}, ${fmt(pct,1)}%) exceeds position size.`;
   } else if (totalExitShares < totalEntryShares - 0.001) {
-    noteEl.className = 'allocation-note';
-    noteEl.textContent = `${fmt(totalExitShares,0)} of ${fmt(totalEntryShares,0)} shares closed so far (${fmt(exitPctOfTotal,1)}% of position, still partially open).`;
+    noteEl.className = 'alloc-note';
+    noteEl.textContent = `${fmt(totalExitShares,0)} of ${fmt(totalEntryShares,0)} shares closed (${fmt(pct,1)}% — position still open).`;
   } else {
-    noteEl.className = 'allocation-note ok';
-    noteEl.textContent = `Full position closed (${fmt(totalEntryShares,0)} shares) — allocation mode: ${allocMode === 'fifo' ? 'FIFO' : 'Pro-Rata'}.`;
+    noteEl.className = 'alloc-note ok';
+    noteEl.textContent = `Full position closed (${fmt(totalEntryShares,0)} shares) — ${allocMode === 'fifo' ? 'FIFO' : 'Pro-Rata'}.`;
   }
 
-  // per-setup aggregation
-  const setupMap = {};
+  const map = {};
   entries.forEach(e => {
-    if (!setupMap[e.tag]) setupMap[e.tag] = { size: 0, risk: 0, reward: 0, hasRisk: true };
-    setupMap[e.tag].size += e.qty;
-    setupMap[e.tag].reward += e.allocatedReward;
-    if (e.risk !== null) {
-      setupMap[e.tag].risk += e.risk;
-    } else {
-      setupMap[e.tag].hasRisk = false;
-    }
+    if (!map[e.tag]) map[e.tag] = { size:0, risk:0, reward:0, hasRisk:true };
+    map[e.tag].size += e.qty;
+    map[e.tag].reward += e.allocatedReward;
+    if (e.risk !== null) map[e.tag].risk += e.risk;
+    else map[e.tag].hasRisk = false;
   });
-
   const tbody = document.getElementById('setupTableBody');
   tbody.innerHTML = '';
-  Object.keys(setupMap).forEach(tag => {
-    const s = setupMap[tag];
+  Object.keys(map).forEach(tag => {
+    const s = map[tag];
     const r = (s.hasRisk && s.risk !== 0) ? s.reward / s.risk : null;
-    const rClass = r === null ? 'neutral' : (r >= 0 ? 'positive' : 'negative');
-    const rewardClass = s.reward >= 0 ? 'positive' : 'negative';
+    const rc = r === null ? 'neutral' : (r >= 0 ? 'positive' : 'negative');
+    const rewc = s.reward >= 0 ? 'positive' : 'negative';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><span class="tag-pill">${tag}</span></td>
-      <td class="${rClass}"><strong>${r !== null ? fmt(r) + 'R' : '–'}</strong></td>
-      <td>${fmt(s.size, 0)}</td>
-      <td>${s.hasRisk ? '$' + fmt(Math.abs(s.risk)) : 'Missing stop'}</td>
-      <td class="${rewardClass}">${s.reward >= 0 ? '' : '-'}$${fmt(Math.abs(s.reward))}</td>
+      <td class="${rc}"><strong>${r !== null ? fmt(r)+'R' : '–'}</strong></td>
+      <td>${fmt(s.size,0)}</td>
+      <td>${s.hasRisk ? '$'+fmt(Math.abs(s.risk)) : '–'}</td>
+      <td class="${rewc}">${s.reward>=0?'':'-'}$${fmt(Math.abs(s.reward))}</td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-addEntryRow();
-addExitRow();
-calculate();
+// ─── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  initChart();
+  addEntryRow();
+  addExitRow();
+  setTapMode('none');
+  document.getElementById('tickerInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadChart(); });
+});
 </script>
 </body>
 </html>
