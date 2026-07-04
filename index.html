@@ -164,6 +164,13 @@ table.setup-table th { color: #7d8290; font-size: 0.65rem; text-transform: upper
 .tap-btn.active-entry { background: #10231d; color: #4ade80; border-color: #235c43; }
 .tap-btn.active-exit { background: #1c1730; color: #a78bfa; border-color: #302650; }
 .tap-btn.active-stop { background: #2a1620; color: #ff6b81; border-color: #4a2030; }
+.tap-btn.active-delete { background: #2a1620; color: #ff6b81; border-color: #4a2030; }
+.delete-marker-btn {
+  padding: 5px 9px; border-radius: 6px; border: 1px solid #4a2030;
+  background: #1e0a0f; color: #ff6b81; cursor: pointer; font-size: 0.85rem;
+  white-space: nowrap; line-height: 1;
+}
+.delete-marker-btn:hover { background: #2a1018; }
 .clear-lines-btn {
   padding: 5px 10px; border-radius: 6px; border: 1px solid #40301e;
   background: #1e1509; color: #ff9f5b; cursor: pointer; font-size: 0.72rem;
@@ -182,6 +189,7 @@ table.setup-table th { color: #7d8290; font-size: 0.65rem; text-transform: upper
   font-size: 0.72rem; color: #7d8290;
 }
 footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; background: #0f1117; border-top: 1px solid #262b3a; }
+.empty-hint { font-size: 0.72rem; color: #565b68; padding: 4px 2px 8px; }
 </style>
 </head>
 <body>
@@ -203,6 +211,7 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
       <h2 class="setup-color">Entries (by Setup)</h2>
       <div class="row-header-entry"><div>Tag</div><div>Entry</div><div>Qty</div><div>Stop</div><div></div></div>
       <div id="entriesContainer"></div>
+      <div class="empty-hint" id="entriesEmptyHint">No entries yet &#x2014; tap the chart or click below.</div>
       <button class="add-btn" onclick="addEntryRow()">+ Add Entry</button>
     </div>
     <div class="card">
@@ -213,6 +222,7 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
       </div>
       <div class="row-header-exit"><div>Exit Price</div><div id="exitQtyHeader">Qty</div><div></div></div>
       <div id="exitsContainer"></div>
+      <div class="empty-hint" id="exitsEmptyHint">No exits yet &#x2014; tap the chart or click below.</div>
       <button class="add-btn exit-btn" onclick="addExitRow()">+ Add Exit</button>
       <div style="margin-top:10px; font-size:0.72rem; color:#7d8290;">Exit attribution to setups:</div>
       <div class="toggle-row" style="margin-top:5px;">
@@ -265,8 +275,9 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
       <button class="tap-btn" id="tapEntry" onclick="setTapMode('entry')">+ Entry</button>
       <button class="tap-btn" id="tapStop" onclick="setTapMode('stop')">Set Stop</button>
       <button class="tap-btn" id="tapExit" onclick="setTapMode('exit')">+ Exit</button>
+      <button class="delete-marker-btn" id="tapDelete" onclick="setTapMode('delete')" title="Delete a single marker">&#x1F5D1;</button>
       <span id="tapModeLabel" style="font-size:0.72rem;color:#4fd1c5;"></span>
-      <button class="clear-lines-btn" onclick="clearLines()">Clear Lines</button>
+      <button class="clear-lines-btn" onclick="clearAll()">Clear Markers</button>
     </div>
     <div id="chartContainer">
       <div class="chart-hint" id="chartHint">Enter a ticker and click "Load" to begin</div>
@@ -278,15 +289,23 @@ footer { text-align: center; color: #565b68; font-size: 0.7rem; padding: 6px; ba
 <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
 <script>
 let direction = 'long', allocMode = 'fifo', exitMode = 'shares', tapMode = 'none', currentTF = '1m';
-let chart = null, candleSeries = null, priceLines = [];
+let chart = null, candleSeries = null;
 let sessionCandles = [];
+let markerPrimitive = null;
+let markerIdCounter = 1;
+
+// Stop-setting two-step flow
+let stopStep = null;        // null | 'awaiting-entry' | 'awaiting-price'
+let stopSelectedEntryId = null;
 
 const tfMap    = { '1m':'1m', '5m':'5m', '15m':'15m', '1h':'60m', '1d':'1d' };
-// Max lookback Yahoo allows per interval (days). Order matters for fallback.
 const tfOrder  = ['1m','5m','15m','1h','1d'];
 const tfWindow = { '1m':7, '5m':60, '15m':60, '1h':730, '1d':1825 };
 
-// ─── ET offset helper ─────────────────────────────────────────────────────
+const COLOR_BLUE = '#2f6fed';
+const COLOR_RED  = '#ff3b30';
+const COLOR_WHITE = '#ffffff';
+
 function utcToEtWallClock(utcSeconds) {
   const ms = utcSeconds * 1000;
   const fmtr = new Intl.DateTimeFormat('en-US', {
@@ -304,51 +323,32 @@ function utcToEtWallClock(utcSeconds) {
   ) / 1000);
 }
 
-// ─── Session shading primitive ─────────────────────────────────────────────
 class SessionRenderer {
-  constructor(candles, chartRef) {
-    this._candles = candles;
-    this._chart   = chartRef;
-  }
+  constructor(candles, chartRef) { this._candles = candles; this._chart = chartRef; }
   drawBackground(target) { this._paint(target); }
   draw(target) {}
   _paint(target) {
     if (!this._chart || this._candles.length === 0) return;
     const ts = this._chart.timeScale();
     target.useBitmapCoordinateSpace(scope => {
-      const ctx = scope.context;
-      const W   = scope.bitmapSize.width;
-      const H   = scope.bitmapSize.height;
-      const pr  = scope.horizontalPixelRatio;
+      const ctx = scope.context, W = scope.bitmapSize.width, H = scope.bitmapSize.height, pr = scope.horizontalPixelRatio;
       let barW = 6 * pr;
       if (this._candles.length >= 2) {
-        const x0 = ts.timeToCoordinate(this._candles[0].time);
-        const x1 = ts.timeToCoordinate(this._candles[1].time);
+        const x0 = ts.timeToCoordinate(this._candles[0].time), x1 = ts.timeToCoordinate(this._candles[1].time);
         if (x0 !== null && x1 !== null) barW = Math.abs((x1 - x0) * pr);
       }
       if (barW < 1) barW = 1;
       let spanL = null, spanR = null, spanColor = null;
-      const flush = () => {
-        if (spanL === null) return;
-        ctx.fillStyle = spanColor;
-        ctx.fillRect(spanL, 0, spanR - spanL, H);
-        spanL = spanR = spanColor = null;
-      };
+      const flush = () => { if (spanL === null) return; ctx.fillStyle = spanColor; ctx.fillRect(spanL, 0, spanR - spanL, H); spanL = spanR = spanColor = null; };
       for (const c of this._candles) {
-        const d    = new Date(c.time * 1000);
-        const secs = d.getUTCHours() * 3600 + d.getUTCMinutes() * 60;
-        const isPre  = secs >= 4*3600  && secs < 9*3600 + 30*60;
-        const isPost = secs >= 16*3600 && secs <= 20*3600;
-        const color  = isPre  ? 'rgba(255,152,0,0.15)'
-                     : isPost ? 'rgba(41,98,255,0.15)' : null;
+        const d = new Date(c.time * 1000), secs = d.getUTCHours() * 3600 + d.getUTCMinutes() * 60;
+        const isPre = secs >= 4*3600 && secs < 9*3600+30*60, isPost = secs >= 16*3600 && secs <= 20*3600;
+        const color = isPre ? 'rgba(255,152,0,0.15)' : isPost ? 'rgba(41,98,255,0.15)' : null;
         const xCss = ts.timeToCoordinate(c.time);
         if (xCss === null) { flush(); continue; }
         const x = xCss * pr;
         if (x < -barW || x > W + barW) { flush(); continue; }
-        if (color) {
-          if (spanColor === color) { spanR = x + barW / 2; }
-          else { flush(); spanL = x - barW / 2; spanR = x + barW / 2; spanColor = color; }
-        } else { flush(); }
+        if (color) { if (spanColor === color) { spanR = x + barW/2; } else { flush(); spanL = x - barW/2; spanR = x + barW/2; spanColor = color; } } else { flush(); }
       }
       flush();
     });
@@ -356,18 +356,97 @@ class SessionRenderer {
 }
 class SessionPaneView {
   constructor(candles, chartRef) { this._renderer = new SessionRenderer(candles, chartRef); }
-  zOrder()   { return 'bottom'; }
-  renderer() { return this._renderer; }
+  zOrder() { return 'bottom'; } renderer() { return this._renderer; }
 }
 class SessionShadingPrimitive {
   constructor(candles, chartRef) { this._view = new SessionPaneView(candles, chartRef); }
-  attached()       {}
-  detached()       {}
-  updateAllViews() {}
-  paneViews()      { return [this._view]; }
+  attached() {} detached() {} updateAllViews() {} paneViews() { return [this._view]; }
 }
 
-// ─── UI helpers ───────────────────────────────────────────────────────────────
+class MarkerRenderer {
+  constructor(markers, chartRef, seriesRef, getHighlightId) {
+    this._markers = markers; this._chart = chartRef; this._series = seriesRef; this._getHighlightId = getHighlightId;
+  }
+  draw(target) { this._paint(target); }
+  drawBackground(target) {}
+  _paint(target) {
+    if (!this._chart || !this._series || this._markers.length === 0) return;
+    const ts = this._chart.timeScale();
+    const highlightId = this._getHighlightId ? this._getHighlightId() : null;
+    target.useBitmapCoordinateSpace(scope => {
+      const ctx = scope.context, pr = scope.horizontalPixelRatio, pv = scope.verticalPixelRatio;
+      const W = scope.bitmapSize.width, H = scope.bitmapSize.height;
+      const size = 9 * pr, height = 11 * pv;
+      for (const m of this._markers) {
+        const xCss = ts.timeToCoordinate(m.time), yCss = this._series.priceToCoordinate(m.price);
+        if (xCss === null || yCss === null) continue;
+        const x = xCss * pr, y = yCss * pv;
+        if (x < -size*2 || x > W+size*2 || y < -height*2 || y > H+height*2) continue;
+        if (m.kind === 'stop') {
+          ctx.beginPath(); ctx.moveTo(x - size, y); ctx.lineTo(x + size, y);
+          ctx.lineWidth = 3 * pr; ctx.strokeStyle = COLOR_RED; ctx.stroke();
+          continue;
+        }
+        const isHighlighted = highlightId !== null && m.id === highlightId;
+        const s = isHighlighted ? size * 1.35 : size, h = isHighlighted ? height * 1.35 : height;
+        ctx.beginPath();
+        if (m.shape === 'up') { ctx.moveTo(x, y - h/2); ctx.lineTo(x - s, y + h/2); ctx.lineTo(x + s, y + h/2); }
+        else { ctx.moveTo(x, y + h/2); ctx.lineTo(x - s, y - h/2); ctx.lineTo(x + s, y - h/2); }
+        ctx.closePath(); ctx.fillStyle = m.color; ctx.fill();
+        ctx.lineWidth = isHighlighted ? 2.6 * pr : 1.6 * pr; ctx.strokeStyle = COLOR_WHITE; ctx.stroke();
+      }
+    });
+  }
+}
+class MarkerPaneView {
+  constructor(markers, chartRef, seriesRef, getHighlightId) { this._renderer = new MarkerRenderer(markers, chartRef, seriesRef, getHighlightId); }
+  zOrder() { return 'top'; } renderer() { return this._renderer; }
+}
+class MarkerPrimitive {
+  constructor(chartRef, seriesRef, getHighlightId) {
+    this.markers = []; this._chart = chartRef; this._series = seriesRef;
+    this._requestUpdate = null;
+    this._view = new MarkerPaneView(this.markers, chartRef, seriesRef, getHighlightId);
+  }
+  attached(param) { this._requestUpdate = param && param.requestUpdate ? param.requestUpdate : null; }
+  detached() { this._requestUpdate = null; }
+  updateAllViews() {} paneViews() { return [this._view]; }
+  addMarker(id, time, price, color, shape, kind, entryId=null) {
+    this.markers.push({ id, time, price, color, shape, kind, entryId });
+    if (this._requestUpdate) this._requestUpdate();
+  }
+  removeMarkerById(id) {
+    const idx = this.markers.findIndex(m => m.id === id);
+    if (idx !== -1) this.markers.splice(idx, 1);
+    if (this._requestUpdate) this._requestUpdate();
+  }
+  removeStopForEntry(entryId) {
+    const idx = this.markers.findIndex(m => m.kind === 'stop' && m.entryId === entryId);
+    if (idx !== -1) this.markers.splice(idx, 1);
+    if (this._requestUpdate) this._requestUpdate();
+  }
+  clear() { this.markers.length = 0; if (this._requestUpdate) this._requestUpdate(); }
+  refresh() { if (this._requestUpdate) this._requestUpdate(); }
+  hitTest(xCssClick, yCssClick, radiusCss = 12, kindFilter = null) {
+    if (!this._chart || !this._series) return null;
+    const ts = this._chart.timeScale();
+    let best = null, bestDist = Infinity;
+    for (const m of this.markers) {
+      if (kindFilter && m.kind !== kindFilter) continue;
+      const xCss = ts.timeToCoordinate(m.time), yCss = this._series.priceToCoordinate(m.price);
+      if (xCss === null || yCss === null) continue;
+      const dist = Math.hypot(xCss - xCssClick, yCss - yCssClick);
+      if (dist <= radiusCss && dist < bestDist) { bestDist = dist; best = m; }
+    }
+    return best;
+  }
+}
+
+function markerStyleFor(kind) {
+  if (kind === 'entry') return direction === 'long' ? { color: COLOR_BLUE, shape: 'up' } : { color: COLOR_RED, shape: 'down' };
+  return direction === 'long' ? { color: COLOR_RED, shape: 'down' } : { color: COLOR_BLUE, shape: 'up' };
+}
+
 function setDirection(dir) {
   direction = dir;
   document.getElementById('btnLong').classList.toggle('active-long', dir === 'long');
@@ -389,14 +468,31 @@ function setExitMode(mode) {
 }
 function setTapMode(mode) {
   tapMode = mode;
-  ['tapNone','tapEntry','tapStop','tapExit'].forEach(id => document.getElementById(id).className = 'tap-btn');
-  const labels = { none:'', entry:'&#x2192; tap chart to add entry price', stop:'&#x2192; tap chart to set stop on latest entry', exit:'&#x2192; tap chart to add exit price' };
-  document.getElementById('tapModeLabel').innerHTML = labels[mode];
-  if (mode==='none')  document.getElementById('tapNone').classList.add('active-entry');
+  stopStep = (mode === 'stop') ? 'awaiting-entry' : null;
+  stopSelectedEntryId = null;
+  ['tapNone','tapEntry','tapStop','tapExit','tapDelete'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active-entry','active-exit','active-stop','active-delete');
+  });
+  updateModeLabel();
   if (mode==='entry') document.getElementById('tapEntry').classList.add('active-entry');
   if (mode==='stop')  document.getElementById('tapStop').classList.add('active-stop');
   if (mode==='exit')  document.getElementById('tapExit').classList.add('active-exit');
+  if (mode==='delete') document.getElementById('tapDelete').classList.add('active-delete');
   if (chart) chart.applyOptions({ handleScroll: mode==='none', handleScale: mode==='none' });
+  if (markerPrimitive) markerPrimitive.refresh();
+}
+function updateModeLabel() {
+  let text = '';
+  if (tapMode === 'stop') {
+    text = stopStep === 'awaiting-entry'
+      ? '&#x2192; click the entry triangle you want to set a stop for'
+      : '&#x2192; now click the chart to set the stop price for that entry';
+  } else {
+    const labels = { none:'', entry:'&#x2192; tap chart to add entry price', exit:'&#x2192; tap chart to add exit price', delete:'&#x2192; tap a triangle on the chart to delete it' };
+    text = labels[tapMode] || '';
+  }
+  document.getElementById('tapModeLabel').innerHTML = text;
 }
 function setTF(tf) {
   currentTF = tf;
@@ -406,30 +502,25 @@ function onDateChange() {
   const v = document.getElementById('dateEnd').value;
   document.getElementById('dateEnd').classList.toggle('date-active', !!v);
 }
-function clearDate() {
-  document.getElementById('dateEnd').value = '';
-  document.getElementById('dateEnd').classList.remove('date-active');
-}
-function clearLines() {
-  if (candleSeries && priceLines.length) {
-    priceLines.forEach(line => { try { candleSeries.removePriceLine(line); } catch(e) {} });
-    priceLines = [];
-    setStatus('Chart price lines cleared.');
-  }
-}
+function clearDate() { document.getElementById('dateEnd').value = ''; document.getElementById('dateEnd').classList.remove('date-active'); }
 function clearAll() {
   document.getElementById('entriesContainer').innerHTML = '';
   document.getElementById('exitsContainer').innerHTML = '';
-  addEntryRow(); addExitRow(); clearLines();
-  setStatus('All entries, exits, and chart lines cleared.');
+  if (markerPrimitive) markerPrimitive.clear();
+  updateEmptyHints(); calculate();
+  setStatus('All entries, exits, and chart markers cleared.');
+}
+function updateEmptyHints() {
+  const eHint = document.getElementById('entriesEmptyHint'), xHint = document.getElementById('exitsEmptyHint');
+  if (eHint) eHint.style.display = document.querySelectorAll('#entriesContainer .row-entry').length ? 'none' : 'block';
+  if (xHint) xHint.style.display = document.querySelectorAll('#exitsContainer .row-exit').length ? 'none' : 'block';
 }
 
 function initChart() {
   const container = document.getElementById('chartContainer');
-  if (chart) { chart.remove(); chart = null; candleSeries = null; priceLines = []; }
+  if (chart) { chart.remove(); chart = null; candleSeries = null; markerPrimitive = null; }
   chart = LightweightCharts.createChart(container, {
-    width: container.clientWidth,
-    height: container.clientHeight,
+    width: container.clientWidth, height: container.clientHeight,
     layout: { background: { color: '#0a0c10' }, textColor: '#9aa0ac' },
     grid: { vertLines: { color: '#1a1d26' }, horzLines: { color: '#1a1d26' } },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
@@ -443,62 +534,88 @@ function initChart() {
   });
   chart.subscribeClick(param => {
     if (tapMode === 'none' || !param.point) return;
+    if (tapMode === 'delete') {
+      if (!markerPrimitive) return;
+      const hit = markerPrimitive.hitTest(param.point.x, param.point.y);
+      if (hit) deleteMarkerAndRow(hit.id);
+      return;
+    }
+    if (tapMode === 'stop') {
+      if (stopStep === 'awaiting-entry') {
+        const hit = markerPrimitive ? markerPrimitive.hitTest(param.point.x, param.point.y, 12, 'entry') : null;
+        if (!hit) { setStatus('No entry triangle there &#x2014; click directly on an existing entry marker.'); return; }
+        stopSelectedEntryId = hit.id; stopStep = 'awaiting-price';
+        updateModeLabel(); if (markerPrimitive) markerPrimitive.refresh();
+        setStatus('Entry selected &#x2014; now click the chart to set its stop price.');
+        return;
+      }
+      if (stopStep === 'awaiting-price') {
+        if (param.time === undefined) return;
+        const price = candleSeries.coordinateToPrice(param.point.y);
+        if (price === null) return;
+        applyStopToEntry(stopSelectedEntryId, parseFloat(price.toFixed(4)));
+        setTapMode('none'); return;
+      }
+      return;
+    }
+    if (param.time === undefined) return;
     const price = candleSeries.coordinateToPrice(param.point.y);
     if (price === null) return;
-    const p = parseFloat(price.toFixed(4));
-    if (tapMode==='entry') handleTapEntry(p);
-    else if (tapMode==='stop') handleTapStop(p);
-    else if (tapMode==='exit') handleTapExit(p);
+    const p = parseFloat(price.toFixed(4)), t = param.time;
+    if (tapMode==='entry') { handleTapEntry(p, t); setTapMode('none'); }
+    else if (tapMode==='exit') { handleTapExit(p, t); setTapMode('none'); }
   });
-  window.addEventListener('resize', () => {
-    if (chart) chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
-  });
+  window.addEventListener('resize', () => { if (chart) chart.applyOptions({ width: container.clientWidth, height: container.clientHeight }); });
 }
 
-function addPriceLine(price, color, title) {
-  if (!candleSeries) return null;
-  const line = candleSeries.createPriceLine({ price, color, lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title });
-  priceLines.push(line);
-  return line;
+function applyStopToEntry(entryMarkerId, stopPrice) {
+  const row = document.querySelector(`[data-marker-id="${entryMarkerId}"]`);
+  if (!row || !row.classList.contains('row-entry')) { setStatus('Could not find the linked entry row.'); return; }
+  const stopInput = row.querySelectorAll('input')[3];
+  stopInput.value = stopPrice; stopInput.classList.add('tapped');
+  setTimeout(() => stopInput.classList.remove('tapped'), 1500);
+  if (markerPrimitive) {
+    markerPrimitive.removeStopForEntry(entryMarkerId);
+    const entryMarker = markerPrimitive.markers.find(m => m.id === entryMarkerId);
+    if (entryMarker) markerPrimitive.addMarker(markerIdCounter++, entryMarker.time, stopPrice, COLOR_RED, 'dash', 'stop', entryMarkerId);
+  }
+  calculate();
+  setStatus('Stop set @ ' + stopPrice + ' for the selected entry.');
 }
-function handleTapEntry(price) {
-  addEntryRow('', price, '', '');
-  addPriceLine(price, '#4ade80', 'E');
-  setStatus('Entry added @ ' + price + ' &#x2014; enter tag, qty, and stop in the left panel');
+function deleteMarkerAndRow(markerId) {
+  if (markerPrimitive) { markerPrimitive.removeStopForEntry(markerId); markerPrimitive.removeMarkerById(markerId); }
+  const row = document.querySelector(`[data-marker-id="${markerId}"]`);
+  if (row) row.remove();
+  updateEmptyHints(); calculate();
+  setStatus('Marker and its linked row removed.');
 }
-function handleTapStop(price) {
-  const rows = document.querySelectorAll('#entriesContainer .row-entry');
-  let targeted = null;
-  for (let i = rows.length-1; i >= 0; i--) { const s = rows[i].querySelectorAll('input')[3]; if (!s.value) { targeted = s; break; } }
-  if (!targeted && rows.length > 0) targeted = rows[rows.length-1].querySelectorAll('input')[3];
-  if (targeted) { targeted.value = price; targeted.classList.add('tapped'); setTimeout(() => targeted.classList.remove('tapped'), 1500); addPriceLine(price, '#ff6b81', 'SL'); calculate(); }
-  setStatus('Stop set @ ' + price);
+function handleTapEntry(price, time) {
+  const id = markerIdCounter++;
+  addEntryRow('', price, '', '', id);
+  if (markerPrimitive) { const style = markerStyleFor('entry'); markerPrimitive.addMarker(id, time, price, style.color, style.shape, 'entry'); }
+  setStatus('Entry added @ ' + price + ' &#x2014; enter tag, qty in the left panel. Use Set Stop to assign a stop.');
 }
-function handleTapExit(price) {
-  addExitRow(price, '');
+function handleTapExit(price, time) {
+  const id = markerIdCounter++;
+  addExitRow(price, '', id);
   const rows = document.querySelectorAll('#exitsContainer .row-exit');
   if (rows.length > 0) rows[rows.length-1].querySelectorAll('input')[1].focus();
-  addPriceLine(price, '#a78bfa', 'TP');
+  if (markerPrimitive) { const style = markerStyleFor('exit'); markerPrimitive.addMarker(id, time, price, style.color, style.shape, 'exit'); }
   setStatus('Exit added @ ' + price + ' &#x2014; enter qty or % in the left panel');
 }
 function setStatus(msg) { document.getElementById('statusBar').innerHTML = msg; }
 
-// ─── Build API URL ────────────────────────────────────────────────────────────
 function buildApiUrl(ticker) {
-  const interval = tfMap[currentTF];
-  const endVal   = document.getElementById('dateEnd').value;
+  const interval = tfMap[currentTF], endVal = document.getElementById('dateEnd').value;
   const base = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=${interval}&includePrePost=true`;
   if (endVal) {
     const p2 = Math.floor(new Date(endVal + 'T23:59:59Z').getTime() / 1000);
-    const windowSecs = tfWindow[currentTF] * 24 * 3600;
-    const p1 = p2 - windowSecs;
-    return `${base}&period1=${p1}&period2=${p2}`;
+    return `${base}&period1=${p2 - tfWindow[currentTF]*24*3600}&period2=${p2}`;
   }
   const rangeMap = { '1m':'7d', '5m':'60d', '15m':'60d', '1h':'730d', '1d':'5y' };
   return `${base}&range=${rangeMap[currentTF]}`;
 }
-
-async function tryFetch(url, timeout = 9000) {
+async function tryFetch(url, timeout=9000) {
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(timeout) });
     if (!res.ok) return null;
@@ -506,45 +623,21 @@ async function tryFetch(url, timeout = 9000) {
     return data?.chart?.result?.[0] ? data : null;
   } catch(e) { return null; }
 }
-
-// ─── Auto TF fallback ───────────────────────────────────────────────────────────
-// Returns { switchedFrom, switchedTo } if a switch happened, else null.
 function autoSwitchTFIfNeeded(endVal) {
   if (!endVal) return null;
-  const endMs   = new Date(endVal + 'T23:59:59Z').getTime();
-  const nowMs   = Date.now();
-  const daysAgo = (nowMs - endMs) / (1000 * 86400);
-  if (daysAgo <= tfWindow[currentTF]) return null; // current TF is fine
-
+  const daysAgo = (Date.now() - new Date(endVal + 'T23:59:59Z').getTime()) / (1000*86400);
+  if (daysAgo <= tfWindow[currentTF]) return null;
   const original = currentTF;
-  for (const tf of tfOrder) {
-    if (tfWindow[tf] >= daysAgo) {
-      setTF(tf);
-      return { from: original, to: tf };
-    }
-  }
-  // If even 1d can't cover it (>5 years), switch to 1d anyway
-  setTF('1d');
-  return { from: original, to: '1d' };
+  for (const tf of tfOrder) { if (tfWindow[tf] >= daysAgo) { setTF(tf); return { from: original, to: tf }; } }
+  setTF('1d'); return { from: original, to: '1d' };
 }
-
 async function loadChart() {
   const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
   if (!ticker) return;
-  const statusEl = document.getElementById('chartStatus');
-  const endVal   = document.getElementById('dateEnd').value;
-
-  // — Auto-switch TF before fetching —
+  const statusEl = document.getElementById('chartStatus'), endVal = document.getElementById('dateEnd').value;
   const switched = autoSwitchTFIfNeeded(endVal);
-  let switchNote = '';
-  if (switched) {
-    const windowDays = tfWindow[switched.from];
-    switchNote = `⚠️ Auto-switched from ${switched.from} → ${switched.to}: Yahoo only keeps ${windowDays} days of ${switched.from} data, but your selected date is older than that. ${switched.to} is the finest timeframe that can reach it. `;
-  }
-
-  statusEl.textContent = 'Loading…';
-  document.getElementById('chartHint').style.display = 'none';
-
+  let switchNote = switched ? `&#x26A0;&#xFE0F; Auto-switched ${switched.from} &#x2192; ${switched.to}. ` : '';
+  statusEl.textContent = 'Loading…'; document.getElementById('chartHint').style.display = 'none';
   const apiUrl = buildApiUrl(ticker);
   const proxies = [
     `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
@@ -552,54 +645,33 @@ async function loadChart() {
     `https://proxy.cors.sh/${apiUrl}`,
     `https://thingproxy.freeboard.io/fetch/${apiUrl}`,
   ];
-
   let json = null;
-  for (const url of proxies) {
-    statusEl.textContent = 'Trying…';
-    json = await tryFetch(url);
-    if (json) break;
-  }
-  if (!json) {
-    statusEl.textContent = 'Failed — check ticker';
-    setStatus(switchNote + 'Could not load "' + ticker + '". Check the symbol or try a different date.');
-    return;
-  }
-
+  for (const url of proxies) { statusEl.textContent = 'Trying…'; json = await tryFetch(url); if (json) break; }
+  if (!json) { statusEl.textContent = 'Failed — check ticker'; setStatus(switchNote + 'Could not load "' + ticker + '".'); return; }
   try {
-    const result = json.chart.result[0];
-    const ts = result.timestamp;
-    const q  = result.indicators.quote[0];
-
+    const result = json.chart.result[0], ts = result.timestamp, q = result.indicators.quote[0];
     const candles = ts.map((t, i) => ({
-      time:  utcToEtWallClock(t),
+      time: utcToEtWallClock(t),
       open:  q.open[i]  ? +q.open[i].toFixed(4)  : null,
       high:  q.high[i]  ? +q.high[i].toFixed(4)  : null,
       low:   q.low[i]   ? +q.low[i].toFixed(4)   : null,
       close: q.close[i] ? +q.close[i].toFixed(4) : null,
     })).filter(c => c.open && c.high && c.low && c.close);
-
     sessionCandles = candles;
     initChart();
-    const primitive = new SessionShadingPrimitive(candles, chart);
-    candleSeries.attachPrimitive(primitive);
-    candleSeries.setData(candles);
-    chart.timeScale().fitContent();
-
-    const label = endVal ? `up to ${endVal}` : 'latest';
+    candleSeries.attachPrimitive(new SessionShadingPrimitive(candles, chart));
+    markerPrimitive = new MarkerPrimitive(chart, candleSeries, () => (stopStep === 'awaiting-price' ? stopSelectedEntryId : null));
+    candleSeries.attachPrimitive(markerPrimitive);
+    candleSeries.setData(candles); chart.timeScale().fitContent();
     statusEl.textContent = `${ticker} · ${candles.length} bars · ${currentTF} · ET`;
-    setStatus(switchNote + `${ticker} loaded (${label}, max bars for ${currentTF}, pre/post-market included) — axis shows U.S. ET.`);
-  } catch(e) {
-    console.error(e);
-    statusEl.textContent = 'Parse error';
-    setStatus(switchNote + 'Chart data parse failed. Try a different timeframe or date.');
-  }
+    setStatus(switchNote + `${ticker} loaded &#x2014; axis shows U.S. ET.`);
+  } catch(e) { console.error(e); statusEl.textContent = 'Parse error'; setStatus(switchNote + 'Chart data parse failed.'); }
 }
 
-// ─── Row Management ───────────────────────────────────────────────────────────
-function addEntryRow(tag='', price='', qty='', stop='') {
+function addEntryRow(tag='', price='', qty='', stop='', markerId=null) {
   const container = document.getElementById('entriesContainer');
-  const row = document.createElement('div');
-  row.className = 'row-entry';
+  const row = document.createElement('div'); row.className = 'row-entry';
+  if (markerId !== null) row.setAttribute('data-marker-id', markerId);
   row.innerHTML = `
     <input type="text" placeholder="ORB" value="${tag}" oninput="calculate()">
     <input type="number" step="any" placeholder="Price" value="${price}" oninput="calculate()">
@@ -607,24 +679,26 @@ function addEntryRow(tag='', price='', qty='', stop='') {
     <input type="number" step="any" placeholder="Stop" value="${stop}" oninput="calculate()">
     <button class="remove-btn" onclick="removeRow(this)">&#xd7;</button>
   `;
-  container.appendChild(row);
-  calculate();
+  container.appendChild(row); updateEmptyHints(); calculate();
 }
-function addExitRow(price='', qty='') {
+function addExitRow(price='', qty='', markerId=null) {
   const container = document.getElementById('exitsContainer');
-  const row = document.createElement('div');
-  row.className = 'row-exit';
+  const row = document.createElement('div'); row.className = 'row-exit';
+  if (markerId !== null) row.setAttribute('data-marker-id', markerId);
   row.innerHTML = `
     <input type="number" step="any" placeholder="Exit Price" value="${price}" oninput="calculate()">
     <input type="number" step="any" placeholder="${exitMode==='shares'?'Qty':'%'}" value="${qty}" oninput="calculate()">
     <button class="remove-btn" onclick="removeRow(this)">&#xd7;</button>
   `;
-  container.appendChild(row);
-  calculate();
+  container.appendChild(row); updateEmptyHints(); calculate();
 }
-function removeRow(btn) { btn.closest('div[class^="row-"]').remove(); calculate(); }
+function removeRow(btn) {
+  const row = btn.closest('div[class^="row-"]');
+  const markerId = row.getAttribute('data-marker-id');
+  if (markerId !== null && markerPrimitive) { const id = parseInt(markerId, 10); markerPrimitive.removeStopForEntry(id); markerPrimitive.removeMarkerById(id); }
+  row.remove(); updateEmptyHints(); calculate();
+}
 
-// ─── Data Getters ─────────────────────────────────────────────────────────────
 function getEntries() {
   return [...document.querySelectorAll('#entriesContainer .row-entry')].map(row => {
     const inp = row.querySelectorAll('input');
@@ -638,8 +712,7 @@ function getEntries() {
 function getExits(totalEntryShares) {
   return [...document.querySelectorAll('#exitsContainer .row-exit')].map(row => {
     const inp = row.querySelectorAll('input');
-    const price = parseFloat(inp[0].value);
-    let qty = parseFloat(inp[1].value);
+    const price = parseFloat(inp[0].value); let qty = parseFloat(inp[1].value);
     if (!isNaN(price) && !isNaN(qty) && qty > 0) {
       if (exitMode==='percent' && totalEntryShares) qty = (qty/100)*totalEntryShares;
       return { price, qty };
@@ -648,82 +721,40 @@ function getExits(totalEntryShares) {
   }).filter(Boolean);
 }
 
-// ─── Calculate ────────────────────────────────────────────────────────────────
 function fmt(n, d=2) { if (!isFinite(n)) return '–'; return n.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
 
 function calculate() {
-  const entries = getEntries();
-  const totalEntryShares = entries.reduce((s,e) => s+e.qty, 0);
-  const exits = getExits(totalEntryShares);
-  const totalExitShares = exits.reduce((s,e) => s+e.qty, 0);
+  const entries = getEntries(), totalEntryShares = entries.reduce((s,e) => s+e.qty, 0);
+  const exits = getExits(totalEntryShares), totalExitShares = exits.reduce((s,e) => s+e.qty, 0);
   const noteEl = document.getElementById('allocationNote');
-
   if (!entries.length) {
-    ['avgEntry','totalShares','totalRisk','totalReward','rMultiple'].forEach(id => {
-      document.getElementById(id).textContent='–';
-      document.getElementById(id).className='value neutral';
-    });
+    ['avgEntry','totalShares','totalRisk','totalReward','rMultiple'].forEach(id => { document.getElementById(id).textContent='–'; document.getElementById(id).className='value neutral'; });
     document.getElementById('setupTableBody').innerHTML = '';
-    noteEl.className='alloc-note'; noteEl.textContent='Enter entries and exits to see allocation.';
-    return;
+    noteEl.className='alloc-note'; noteEl.textContent='Enter entries and exits to see allocation.'; return;
   }
-
   if (allocMode==='fifo') {
-    exits.forEach(exit => {
-      let rem = exit.qty;
-      for (const t of entries) {
-        if (rem<=0||t.remaining<=0) continue;
-        const fill=Math.min(t.remaining,rem), pl=direction==='long'?(exit.price-t.price):(t.price-exit.price);
-        t.allocatedReward+=pl*fill; t.allocatedExitQty+=fill; t.remaining-=fill; rem-=fill;
-      }
-    });
+    exits.forEach(exit => { let rem = exit.qty; for (const t of entries) { if (rem<=0||t.remaining<=0) continue; const fill=Math.min(t.remaining,rem), pl=direction==='long'?(exit.price-t.price):(t.price-exit.price); t.allocatedReward+=pl*fill; t.allocatedExitQty+=fill; t.remaining-=fill; rem-=fill; } });
   } else {
-    exits.forEach(exit => {
-      entries.forEach(t => {
-        const share=totalEntryShares>0?t.qty/totalEntryShares:0, fill=exit.qty*share;
-        const pl=direction==='long'?(exit.price-t.price):(t.price-exit.price);
-        t.allocatedReward+=pl*fill; t.allocatedExitQty+=fill;
-      });
-    });
+    exits.forEach(exit => { entries.forEach(t => { const share=totalEntryShares>0?t.qty/totalEntryShares:0, fill=exit.qty*share, pl=direction==='long'?(exit.price-t.price):(t.price-exit.price); t.allocatedReward+=pl*fill; t.allocatedExitQty+=fill; }); });
   }
-
-  entries.forEach(e => {
-    if (e.stop!==null) { const r=direction==='long'?(e.price-e.stop):(e.stop-e.price); e.risk=r*e.qty; } else e.risk=null;
-  });
-
-  const validRisk=entries.filter(e=>e.risk!==null);
-  const totalRisk=validRisk.length?validRisk.reduce((s,e)=>s+e.risk,0):null;
-  const totalReward=entries.reduce((s,e)=>s+e.allocatedReward,0);
-  const avgEntry=entries.reduce((s,e)=>s+e.price*e.qty,0)/totalEntryShares;
+  entries.forEach(e => { if (e.stop!==null) { const r=direction==='long'?(e.price-e.stop):(e.stop-e.price); e.risk=r*e.qty; } else e.risk=null; });
+  const validRisk=entries.filter(e=>e.risk!==null), totalRisk=validRisk.length?validRisk.reduce((s,e)=>s+e.risk,0):null;
+  const totalReward=entries.reduce((s,e)=>s+e.allocatedReward,0), avgEntry=entries.reduce((s,e)=>s+e.price*e.qty,0)/totalEntryShares;
   const rMultiple=(totalRisk&&totalRisk!==0)?totalReward/totalRisk:null;
-
   document.getElementById('avgEntry').textContent=fmt(avgEntry,4);
   document.getElementById('totalShares').textContent=fmt(totalEntryShares,0);
-  const riskEl=document.getElementById('totalRisk');
-  riskEl.textContent=totalRisk!==null?'$'+fmt(Math.abs(totalRisk)):'Missing stop(s)';
-  riskEl.className='value '+(totalRisk!==null?'negative':'neutral');
-  const rewEl=document.getElementById('totalReward');
-  rewEl.textContent=(totalReward>=0?'':'-')+'$'+fmt(Math.abs(totalReward));
-  rewEl.className='value '+(totalReward>=0?'positive':'negative');
-  const rEl=document.getElementById('rMultiple');
-  rEl.textContent=rMultiple!==null?fmt(rMultiple)+'R':'–';
-  rEl.className='value '+(rMultiple!==null?(rMultiple>=0?'positive':'negative'):'neutral');
-
+  const riskEl=document.getElementById('totalRisk'); riskEl.textContent=totalRisk!==null?'$'+fmt(Math.abs(totalRisk)):'Missing stop(s)'; riskEl.className='value '+(totalRisk!==null?'negative':'neutral');
+  const rewEl=document.getElementById('totalReward'); rewEl.textContent=(totalReward>=0?'':'-')+'$'+fmt(Math.abs(totalReward)); rewEl.className='value '+(totalReward>=0?'positive':'negative');
+  const rEl=document.getElementById('rMultiple'); rEl.textContent=rMultiple!==null?fmt(rMultiple)+'R':'–'; rEl.className='value '+(rMultiple!==null?(rMultiple>=0?'positive':'negative'):'neutral');
   const pct=totalEntryShares>0?totalExitShares/totalEntryShares*100:0;
   if (totalExitShares>totalEntryShares+0.001) { noteEl.className='alloc-note warn'; noteEl.textContent=`Exit qty (${fmt(totalExitShares,0)}, ${fmt(pct,1)}%) exceeds position size.`; }
   else if (totalExitShares<totalEntryShares-0.001) { noteEl.className='alloc-note'; noteEl.textContent=`${fmt(totalExitShares,0)} of ${fmt(totalEntryShares,0)} shares closed (${fmt(pct,1)}% — still open).`; }
   else { noteEl.className='alloc-note ok'; noteEl.textContent=`Full position closed (${fmt(totalEntryShares,0)} shares) — ${allocMode==='fifo'?'FIFO':'Pro-Rata'}.`; }
-
   const map={};
-  entries.forEach(e => {
-    if (!map[e.tag]) map[e.tag]={size:0,risk:0,reward:0,hasRisk:true};
-    map[e.tag].size+=e.qty; map[e.tag].reward+=e.allocatedReward;
-    if (e.risk!==null) map[e.tag].risk+=e.risk; else map[e.tag].hasRisk=false;
-  });
+  entries.forEach(e => { if (!map[e.tag]) map[e.tag]={size:0,risk:0,reward:0,hasRisk:true}; map[e.tag].size+=e.qty; map[e.tag].reward+=e.allocatedReward; if (e.risk!==null) map[e.tag].risk+=e.risk; else map[e.tag].hasRisk=false; });
   const tbody=document.getElementById('setupTableBody'); tbody.innerHTML='';
   Object.keys(map).forEach(tag => {
-    const s=map[tag], r=(s.hasRisk&&s.risk!==0)?s.reward/s.risk:null;
-    const rc=r===null?'neutral':(r>=0?'positive':'negative'), rewc=s.reward>=0?'positive':'negative';
+    const s=map[tag], r=(s.hasRisk&&s.risk!==0)?s.reward/s.risk:null, rc=r===null?'neutral':(r>=0?'positive':'negative'), rewc=s.reward>=0?'positive':'negative';
     const tr=document.createElement('tr');
     tr.innerHTML=`<td><span class="tag-pill">${tag}</span></td><td class="${rc}"><strong>${r!==null?fmt(r)+'R':'–'}</strong></td><td>${fmt(s.size,0)}</td><td>${s.hasRisk?'$'+fmt(Math.abs(s.risk)):'–'}</td><td class="${rewc}">${s.reward>=0?'':'-'}$${fmt(Math.abs(s.reward))}</td>`;
     tbody.appendChild(tr);
@@ -731,10 +762,7 @@ function calculate() {
 }
 
 window.addEventListener('load', () => {
-  initChart();
-  addEntryRow();
-  addExitRow();
-  setTapMode('none');
+  initChart(); setTapMode('none'); updateEmptyHints(); calculate();
   document.getElementById('tickerInput').addEventListener('keydown', e => { if(e.key==='Enter') loadChart(); });
 });
 </script>
